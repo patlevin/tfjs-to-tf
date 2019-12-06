@@ -170,8 +170,7 @@ with tf.io.gfile.GFile("frozen_model.pb", "rb") as f:
 model_input = tfjs.util.get_input_nodes(graph_def)[0]
 input_shape = model_input.shape
 # extract the width and height of the input dimension (assume "NHWC"-format)
-target_size = input_shape[len(input_shape)-3,-1] if len(input_shape) in (3, 4)
-else None
+target_size = input_shape[len(input_shape)-3,-1] if len(input_shape) in (3, 4) else None
 
 # Load an input image according to the dimensions and element type of the model input
 img = tf.keras.preprocessing.image.load_img("image.png", target_size=target_size)
@@ -261,7 +260,7 @@ Contains the module version.
 
 ### tfjs_graph_converter.version.VERSION
 
-String that contains the module versio.
+String that contains the module version.
 
 ## tfjs_graph_converter.common
 
