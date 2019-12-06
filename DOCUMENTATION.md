@@ -16,7 +16,7 @@ The converter comes with several Python modules:
 Functions to load TensorFlow graphs from TensorFlow.js graph models and convert
 TensorFlow.js graph models to TensorFlow frozen graph and SavedModel formats.
 
-### load_graph_model
+### tfjs_graph_converter.api.load_graph_model
 
 Load a tensorflowjs graph model from a directory and return a tensorflow (v1) graph.
 
@@ -61,7 +61,7 @@ stylised = np.squeeze(results)
 tf.keras.preprocessing.image.save_img('~/images/stylized_sample.jpg', stylised)
 ```
 
-### graph_model_to_frozen_graph
+### tfjs_graph_converter.api.graph_model_to_frozen_graph
 
 Convert a TensorFlow.js graph model to a tensorflow frozen graph.
 
@@ -80,7 +80,7 @@ tfjs.api.graph_model_to_frozen_graph(
     '~/some-website/saved_model_stylelize_js/', '~/models/stylize.pb')
 ```
 
-### graph_model_to_saved_model
+### tfjs_graph_converter.api.graph_model_to_saved_model
 
 Convert a TensorFlow.js graph model to a tensorflow [SavedModel](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_model/README.md)
 on disk.
@@ -97,10 +97,11 @@ on disk.
 import tfjs_graph_converter as tfjs
 
 # convert TFJS model to a SavedModel
-tfjs.api.graph_model_to_saved_model('~/some-website/saved_model_stylelize_js/', '~/models/stylize/')
+tfjs.api.graph_model_to_saved_model('~/some-website/saved_model_stylelize_js/',
+'~/models/stylize/', ['serve'])
 ```
 
-### graph_models_to_saved_model
+### tfjs_graph_converter.api.graph_models_to_saved_model
 
 Merge several TensorFlow.js graph models into a single SavedModel.
 Separate models are identified by different tags (see [documentation](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_model/README.md))
@@ -132,7 +133,7 @@ tfjs.api.graph_models_to_saved_model(model_list, '~/models/combined/')
 Contains utility functions to query graph properties such as input- and output
 tensor names.
 
-### NodeInfo
+### tfjs_graph_converter.util.NodeInfo
 
 `namedtuple` with the following fields:
 
@@ -142,7 +143,7 @@ tensor names.
 * **dtype:** _numpy_ data type of the tensor elements
 * **tensor:** Name of the associated tensor for use with `graph.get_tensor_by_name()`
 
-### get_input_nodes
+### tfjs_graph_converter.util.get_input_nodes
 
 Return a list of `NodeInfo` tuples describing a graph's inputs.
 
@@ -184,7 +185,7 @@ if len(input_shape) > 3:
 # "x" is now a suitable input for the model
 ```
 
-### get_input_tensors
+### tfjs_graph_converter.util.get_input_tensors
 
 Return a list of input tensor names for use with `graph.get_tensor_by_name()`.
 
@@ -224,7 +225,7 @@ with tf.compat.v1.Session(graph=graph) as sess:
 # ...
 ```
 
-### get_output_nodes
+### tfjs_graph_converter.util.get_output_nodes
 
 Return a list of `NodeInfo` tuples describing a graph's outputs.
 
@@ -237,7 +238,7 @@ Return a list of `NodeInfo` tuples describing a graph's outputs.
 List of `NodeInfo` tuples with basic properties of the graph's outputs.
 Note that the `shape` field is not being populated and remains an empty list.
 
-### get_output_tensors
+### tfjs_graph_converter.util.get_output_tensors
 
 Return a list of input tensor names for use with `graph.get_tensor_by_name()`.
 This is useful for passing output tensor names to `Session.run()`.
@@ -253,3 +254,15 @@ List of strings containing output tensor names.
 #### Example
 
 * see `get_input_tensors()` for a usage example
+
+## tfjs_graph_converter.version
+
+Contains the module version.
+
+### tfjs_graph_converter.version.VERSION
+
+String that contains the module versio.
+
+## tfjs_graph_converter.common
+
+Constants used throughout the module.
