@@ -21,9 +21,6 @@ import base64
 import json
 import os
 
-# make tensorflow stop spamming messages
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = "3"
-
 import tensorflow as tf
 import tensorflowjs as tfjs
 import tensorflowjs.converters.common as tfjs_common 
