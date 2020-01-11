@@ -1,17 +1,6 @@
-# Copyright 2019 Patrick Levin. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# ==============================================================================
+# SPDX-License-Identifier: MIT
+# Copyright © 2020 Patrick Levin
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -70,6 +59,36 @@ def _convert_string_attrs(node):
 
     return
 
+def _fix_dilation_attrs(node):
+    """
+    Search dilations-attribute and convert 
+    misaligned dilation rates if necessary see
+    https://github.com/patlevin/tfjs-to-tf/issues/1
+    """
+    path = ['attr', 'dilations', 'list']
+    values = node
+    for key in path:
+        if key in values:
+            values = values[key]
+        else:
+            values = None
+            break
+
+    # if dilations are present, they're stored in 'values' now
+    ints = common.TFJS_ATTR_INT_VALUE_KEY
+    if values is not None and ints in values and isinstance(values[ints], list):
+        v = values[ints]
+        if len(v) is not 4:
+            # must be NCHW-formatted 4D tensor or else TF can't handle it
+            raise ValueError(
+                "Unsupported 'dilations'-attribute in node {}".format(node[
+                    common.TFJS_NAME_KEY]))
+        # check for [>1,>1,1,1], which is likely a mistranslated [1,>1,>1,1]
+        if int(v[0], 10) > 1:
+            values[ints] = ['1', v[0], v[1], '1']
+
+    return
+
 def _convert_attr_values(message_dict):
     """
     Node attributes in deserialised JSON contain strings as lists of ascii codes.
@@ -80,6 +99,7 @@ def _convert_attr_values(message_dict):
         nodes = message_dict[common.TFJS_NODE_KEY]
         for node in nodes:
             _convert_string_attrs(node)
+            _fix_dilation_attrs(node)
 
     return message_dict
 

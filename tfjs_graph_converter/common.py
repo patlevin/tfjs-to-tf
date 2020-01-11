@@ -1,22 +1,5 @@
-# Copyright (c) 2019 Patrick Levin
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
+# SPDX-License-Identifier: MIT
+# Copyright © 2020 Patrick Levin
 # ==============================================================================
 
 # Keys in the model.json file
@@ -30,6 +13,7 @@ TFJS_ATTR_DTYPE_KEY = 'dtype'
 TFJS_ATTR_SHAPE_KEY = 'shape'
 TFJS_ATTR_VALUE_KEY = 'value'
 TFJS_ATTR_STRING_VALUE_KEY = 's'
+TFJS_ATTR_INT_VALUE_KEY = 'i'
 
 TFJS_NAME_KEY = 'name'
 TFJS_DATA_KEY = 'data'
@@ -43,3 +27,7 @@ CLI_VERSION = 'version'
 CLI_SAVED_MODEL = 'tf_saved_model'
 CLI_FROZEN_MODEL = 'tf_frozen_model'
 CLI_SILENT_MODE = 'silent'
+CLI_OPTIMIZATION = 'optimization'
+CLI_OPTIMIZATION_NONE = 'none'
+CLI_OPTIMIZATION_LITE = 'lite'
+CLI_OPTIMIZATION_FULL = 'full'
