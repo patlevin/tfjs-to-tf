@@ -5,16 +5,24 @@
 The converter comes with several Python modules:
 
 * **tfjs_graph_converter**
-* **tfjs_graph_converter.api**
-* **tfjs_graph_converter.common**
+* [**tfjs_graph_converter.api**](#tfjs_graph_converter.api)
+* [**tfjs_graph_converter.common**](#tfjs_graph_converter.common)
 * **tfjs_graph_converter.converter**
-* **tfjs_graph_converter.util**
-* **tfjs_graph_converter.version**
+* [**tfjs_graph_converter.util**](#tfjs_graph_converter.util)
+* [**tfjs_graph_converter.version**](#tfjs_graph_converter.version)
+* [**tfjs_graph_converter.common**](#tfjs_graph_converter.common)
 
 ## tfjs_graph_converter.api
 
 Functions to load TensorFlow graphs from TensorFlow.js graph models and convert
 TensorFlow.js graph models to TensorFlow frozen graph and SavedModel formats.
+
+### Functions
+
+* [load_graph_model](#tfjs_graph_converter.api.load_graph_model)
+* [graph_model_to_frozen_graph](#tfjs_graph_converter.api.graph_model_to_frozen_graph)
+* [graph_model_to_saved_model](#tfjs_graph_converter.api.graph_model_to_saved_model)
+* [graph_models_to_saved_model](#tfjs_graph_converter.api.graph_models_to_saved_model)
 
 ### tfjs_graph_converter.api.load_graph_model
 
@@ -132,6 +140,13 @@ tfjs.api.graph_models_to_saved_model(model_list, '~/models/combined/')
 
 Contains utility functions to query graph properties such as input- and output
 tensor names.
+
+### Contents
+
+* [NodeInfo](#tfjs_graph_converter.util.NodeInfo)
+* [get_input_nodes](#tfjs_graph_converter.util.get_input_nodes)
+* [get_input_tensors](#fjs_graph_converter.util.get_input_tensors)
+* [get_output_nodes](#tfjs_graph_converter.util.get_output_nodes)
 
 ### tfjs_graph_converter.util.NodeInfo
 

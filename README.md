@@ -78,3 +78,5 @@ or use the advanced functionality to combine several TFJS models into a single
 `SavedModel`.
 The latter is only supported using the API (it's just a single function call,
 though, so don't panic :D)
+
+[API Documentation](./DOCUMENTATION.md)
