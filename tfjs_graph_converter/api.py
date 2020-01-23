@@ -53,9 +53,13 @@ def _convert_string_attrs(node):
     attrs = _find_if_has_key(node[attr_key], key=str_key, of_type=list)
     for attr in attrs:
         array = attr[str_key]
-        string = ''.join(map(chr, array))
-        binary = string.encode('utf8') 
-        attr[str_key] = base64.encodebytes(binary) if len(array) > 0 else None
+        # check if conversion is actually necessary 
+        if len(array) > 0 and isinstance(array, list) and isinstance(array[0], int):
+            string = ''.join(map(chr, array))
+            binary = string.encode('utf8') 
+            attr[str_key] = base64.encodebytes(binary)
+        elif len(array) == 0:
+            attr[str_key] = None
 
     return
 
