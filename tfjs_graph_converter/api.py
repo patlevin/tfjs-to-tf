@@ -20,6 +20,25 @@ from functools import reduce
 from tensorflowjs.read_weights import read_weights
 from google.protobuf.json_format import ParseDict, MessageToDict
 
+def _parse_path_and_model_json(model_dir):
+    """
+    Parse model directory name and return path and file name
+
+    Args:
+        model_dir: Model file path - either directory name or path + file name
+    
+    Returns:
+        Tuple of directory name and model file name (without directory)
+    """
+    if model_dir.endswith('.json'):
+        if not os.path.isfile(model_dir):
+            raise ValueError("Model not found: {}".format(model_dir))
+        return os.path.split(model_dir)
+    elif os.path.isdir(model_dir):
+        return model_dir, tfjs_common.ARTIFACT_MODEL_JSON_FILE_NAME
+    else:
+        raise ValueError("Model path is not a directory: {}".format(model_dir))
+
 def _find_if_has_key(obj, key, of_type = None):
     """
     Recursively find all objects with a given key in a dictionary
@@ -190,22 +209,19 @@ def load_graph_model(model_dir):
     Load a TFJS Graph Model from a directory
 
     Args:
-        model_dir: Directory that contains the tfjs model.json and weights
+        model_dir: Directory that contains the tfjs model.json and weights;
+                alternatively name and path of the model.json if the name
+                differs from the default ("model.json")
 
     Returns:
         TF frozen graph for inference or saving
     """
-    if not os.path.isdir(model_dir):
-        raise ValueError("Model path is no directory: {}".format(model_dir))
-
-    model_file_name = os.path.join(model_dir, tfjs_common.ARTIFACT_MODEL_JSON_FILE_NAME)
-    if not os.path.exists(model_file_name) or not os.path.isfile(model_file_name):
-        raise ValueError("Model not found: {}".format(model_file_name))
-
-    with open(model_file_name, "r") as f:
+    model_path, model_name = _parse_path_and_model_json(model_dir)
+    model_file_path = os.path.join(model_path, model_name)
+    with open(model_file_path, "r") as f:
         model_json = json.load(f)
 
-    return _convert_graph_model_to_graph(model_json, model_dir)
+    return _convert_graph_model_to_graph(model_json, model_path)
 
 def graph_model_to_frozen_graph(model_dir, export_path):
     """
