@@ -17,6 +17,7 @@ TFJS_ATTR_INT_VALUE_KEY = 'i'
 
 TFJS_NAME_KEY = 'name'
 TFJS_DATA_KEY = 'data'
+TFJS_OP_KEY = 'op'
 
 # CLI arguments
 CLI_INPUT_PATH = 'input_path'

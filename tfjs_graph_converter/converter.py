@@ -136,7 +136,8 @@ def main(argv):
     try:
         convert(argv[0].split(' '))
     except ValueError as ex:
-        print(ex)
+        msg = ex.args[0] if len(ex.args) > 0 else ex
+        print('Error: {}'.format(msg))
 
 if __name__ == '__main__':
-    tf.app.run(main=main, argv=[' '.join(sys.argv[1:])])
+    tf.compat.v1.app.run(main=main, argv=[' '.join(sys.argv[1:])])

@@ -18,6 +18,7 @@ import tfjs_graph_converter.version as version
 
 from functools import reduce
 from tensorflowjs.read_weights import read_weights
+from tensorflow_core.python.framework import op_def_registry
 from google.protobuf.json_format import ParseDict, MessageToDict
 
 def _parse_path_and_model_json(model_dir):
@@ -69,7 +70,11 @@ def _convert_string_attrs(node):
     """
     attr_key = common.TFJS_NODE_ATTR_KEY
     str_key = common.TFJS_ATTR_STRING_VALUE_KEY
-    attrs = _find_if_has_key(node[attr_key], key=str_key, of_type=list)
+    # some layers (e.g. PReLU) don't contain the `attr` key, so test for its presence
+    attrs = { }
+    if attr_key in node:
+        attrs = _find_if_has_key(node[attr_key], key=str_key, of_type=list)
+
     for attr in attrs:
         array = attr[str_key]
         # check if conversion is actually necessary 
@@ -126,6 +131,35 @@ def _convert_attr_values(message_dict):
 
     return message_dict
 
+def _get_op_list(message_dict):
+    """
+    Return the set of operations used in the graph.
+
+    Args:
+        message_dict: deserialised JSON message
+
+    Returns:
+        Set of operations in the graph
+    """
+    ops = set()
+    if common.TFJS_NODE_KEY in message_dict:
+        nodes = message_dict[common.TFJS_NODE_KEY]
+        ops = set([node[common.TFJS_OP_KEY] for node in nodes])
+
+    return ops
+
+def _verify_supported_ops(op_list):
+    """
+    Verify supported operations and raise an error if the graph
+    contains unsupported layers.
+
+    Args:
+        op_list: Iterable of operation names (strings) contained in the graph
+    """
+    for op in op_list:
+        if op_def_registry.get(op) is None:
+            raise ValueError('Unsupported operation: "{}"'.format(op))
+
 def _convert_graph_def(message_dict):
     """
     Convert JSON to TF GraphDef message
@@ -156,18 +190,20 @@ def _convert_weight_list_to_dict(weight_list):
         weight_dict[entry[common.TFJS_NAME_KEY]] = entry[common.TFJS_DATA_KEY]
     return weight_dict
 
-def _create_graph(graph_def, weight_dict):
+def _create_graph(graph_def, weight_dict, op_list):
     """
     Create a TF Graph from nodes
 
     Args:
         graph_def: TF GraphDef message containing the node graph
         weight_dict: Dictionary from node names to tensor data
+        op_list: Set of operations in the graph
 
     Returns:
         TF Graph for inference or saving
     """
     graph = tf.Graph()
+    _verify_supported_ops(op_list)
     with tf.compat.v1.Session(graph=graph):
         for k, v in weight_dict.items():
             weight_dict[k] = tf.convert_to_tensor(v)
@@ -199,10 +235,11 @@ def _convert_graph_model_to_graph(model_json, base_path):
     weights_manifest = model_json[tfjs_common.ARTIFACT_WEIGHTS_MANIFEST_KEY]
     weight_list = read_weights(weights_manifest, base_path, flatten=True)
 
+    op_list = _get_op_list(topology)
     graph_def = _convert_graph_def(topology)
     weight_dict = _convert_weight_list_to_dict(weight_list)
 
-    return _create_graph(graph_def, weight_dict)
+    return _create_graph(graph_def, weight_dict, op_list)
 
 def load_graph_model(model_dir):
     """
