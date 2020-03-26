@@ -13,7 +13,7 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/patlevin/tfjs-to-tf/",
-    install_requires=['tensorflowjs>=1.3.2'],
+    install_requires=['tensorflowjs>=1.5.0'],
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
