@@ -13,11 +13,13 @@ import os
 import tensorflow as tf
 import tensorflowjs as tfjs
 import tensorflowjs.converters.common as tfjs_common 
+
 import tfjs_graph_converter.common as common
 import tfjs_graph_converter.version as version
 
 from functools import reduce
 from tensorflowjs.read_weights import read_weights
+
 from tensorflow_core.python.framework import op_def_registry
 from google.protobuf.json_format import ParseDict, MessageToDict
 
@@ -173,23 +175,6 @@ def _convert_graph_def(message_dict):
     message_dict = _convert_attr_values(message_dict)
     return ParseDict(message_dict, tf.compat.v1.GraphDef())
 
-def _convert_weight_list_to_dict(weight_list):
-    """
-    Convert list of weight entries to dictionary
-
-    Args:
-        weight_list: List of numpy arrays or tensors formatted as
-                     {'name': 'entry0', 'data': np.array([1,2,3], 'float32')}
-
-    Returns:
-        Dictionary that maps weight names to tensor data, e.g.
-        {'entry0:': np.array(...), 'entry1': np.array(...), ...}
-    """
-    weight_dict = {}
-    for entry in weight_list:
-        weight_dict[entry[common.TFJS_NAME_KEY]] = entry[common.TFJS_DATA_KEY]
-    return weight_dict
-
 def _create_graph(graph_def, weight_dict, op_list):
     """
     Create a TF Graph from nodes
@@ -237,7 +222,8 @@ def _convert_graph_model_to_graph(model_json, base_path):
 
     op_list = _get_op_list(topology)
     graph_def = _convert_graph_def(topology)
-    weight_dict = _convert_weight_list_to_dict(weight_list)
+    name, data = common.TFJS_NAME_KEY, common.TFJS_DATA_KEY
+    weight_dict = dict((weight[name], weight[data]) for weight in weight_list)
 
     return _create_graph(graph_def, weight_dict, op_list)
 
