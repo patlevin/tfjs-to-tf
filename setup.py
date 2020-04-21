@@ -1,12 +1,15 @@
 import setuptools
-from tfjs_graph_converter.version import VERSION 
 
 with open("README.md", "r") as f:
     long_description = f.read()
 
+version={}
+with open("./tfjs_graph_converter/version.py", "r") as f:
+    exec(f.read(), version)
+
 setuptools.setup(
     name="tfjs_graph_converter",
-    version=VERSION,
+    version=version['__version__'],
     author="Patrick Levin",
     author_email="vertical-pink@protonmail.com",
     description="A tensorflowjs Graph Model Converter",
