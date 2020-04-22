@@ -1,23 +1,5 @@
-# Copyright (c) 2019 Patrick Levin
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to deal
-# in the Software without restriction, including without limitation the rights
-# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-# copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-# ==============================================================================
+# SPDX-License-Identifier: MIT
+# Copyright © 2020 Patrick Levin
 from __future__ import absolute_import
 
 from collections import namedtuple
@@ -25,7 +7,7 @@ from collections import namedtuple
 import numpy as np
 import tensorflow as tf
 
-import tfjs_graph_converter.common as common
+import tfjs_graph_converter.common as c
 
 _DTYPE_MAP = [
     None,
@@ -44,24 +26,24 @@ _DTYPE_MAP = [
 NodeInfo = namedtuple('NodeInfo', 'name shape dtype tensor')
 
 def _is_op_node(node):
-    return node.op not in (common.TFJS_NODE_CONST_KEY, common.TFJS_NODE_PLACEHOLDER_KEY)
+    return node.op not in (c.TFJS_NODE_CONST_KEY, c.TFJS_NODE_PLACEHOLDER_KEY)
 
 def _op_nodes(graph_def):
     return [node for node in graph_def.node if _is_op_node(node)]
 
 def _map_type(type_id):
     if type_id < 0 or type_id > len(_DTYPE_MAP):
-        raise ValueError("Unsupported data type: {}".format(type_id))
+        raise ValueError(f'Unsupported data type: {type_id}')
     np_type = _DTYPE_MAP[type_id]
     return np_type
 
 def _get_shape(node):
     shape = lambda attr: attr.shape.dim
     size = lambda dim: dim.size if dim.size > 0 else None
-    return [size(dim) for dim in shape(node.attr[common.TFJS_ATTR_SHAPE_KEY])]
+    return [size(dim) for dim in shape(node.attr[c.TFJS_ATTR_SHAPE_KEY])]
 
 def _node_info(node):
-    dtype = lambda n: _map_type(n.attr[common.TFJS_ATTR_DTYPE_KEY].type)
+    dtype = lambda n: _map_type(n.attr[c.TFJS_ATTR_DTYPE_KEY].type)
     return NodeInfo(name=node.name, shape=_get_shape(node), dtype=dtype(node),
             tensor=node.name + ':0')
 
@@ -79,7 +61,7 @@ def get_input_nodes(graph):
         graph_def = graph.as_graph_def()
     else:
         graph_def = graph
-    nodes = [n for n in graph_def.node if n.op in (common.TFJS_NODE_PLACEHOLDER_KEY)]
+    nodes = [n for n in graph_def.node if n.op == c.TFJS_NODE_PLACEHOLDER_KEY]
     return [_node_info(node) for node in nodes]
 
 def get_output_nodes(graph):
@@ -100,7 +82,7 @@ def get_output_nodes(graph):
 
     ops = _op_nodes(graph_def)
     outputs = []
-    for i in range(0, len(ops)):
+    for i in range(len(ops)):
         node = ops[i]
         has_ref = False
         for test in ops[i+1:]:
