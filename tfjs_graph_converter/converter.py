@@ -1,28 +1,26 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2020 Patrick Levin
 # ==============================================================================
+"""High-level converter functions and CLI entry point"""
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
-import os
 import sys
 import time
 
 import tensorflow as tf
 import tensorflowjs as tfjs
-import tensorflowjs.converters.common as tfjs_common
 
 import tfjs_graph_converter.api as api
 import tfjs_graph_converter.common as common
 import tfjs_graph_converter.version as version
 
+
 def get_arg_parser():
-    """
-    Create the argument parser for the converter binary.
-    """
+    """Create the argument parser for the converter binary."""
     parser = argparse.ArgumentParser(
         description='TensorFlow.js Graph Model converter.')
     parser.add_argument(
@@ -30,15 +28,15 @@ def get_arg_parser():
         nargs='?',
         type=str,
         help='Path to the TFJS Graph Model directory containing the '
-            'model.json')
+             'model.json')
     parser.add_argument(
         common.CLI_OUTPUT_PATH,
         nargs='?',
         type=str,
         help=f'For output format "{common.CLI_SAVED_MODEL}", '
-            'a SavedModel target directory. '
-            f'For output format "{common.CLI_FROZEN_MODEL}", '
-            'a frozen model file.'
+        'a SavedModel target directory. '
+        f'For output format "{common.CLI_FROZEN_MODEL}", '
+        'a frozen model file.'
     )
     parser.add_argument(
         '--' + common.CLI_OUTPUT_FORMAT,
@@ -53,8 +51,8 @@ def get_arg_parser():
         type=str,
         default=default_tag,
         help='Tags of the MetaGraphDef to save, in comma separated string '
-        f'format. Defaults to "{default_tag}". Applicable only if output '
-        f'format is {common.CLI_SAVED_MODEL}'
+             f'format. Defaults to "{default_tag}". Applicable only if output'
+             f' format is {common.CLI_SAVED_MODEL}'
     )
     parser.add_argument(
         '--' + common.CLI_VERSION,
@@ -72,12 +70,13 @@ def get_arg_parser():
     )
     return parser
 
+
 def convert(arguments):
     """
     Convert a TensorflowJS-model to a TensorFlow-model.
 
     Args:
-        arguments: List of command-line arguments   
+        arguments: List of command-line arguments
     """
     args = get_arg_parser().parse_args(arguments)
     if args.show_version:
@@ -118,15 +117,15 @@ def convert(arguments):
     info("Done.")
     info(f"Conversion took {end_time-start_time:.3f}s")
 
-    return
 
 def pip_main():
     """Entry point for pip-packaged binary
 
     Required because the pip-packaged binary calls the entry method
-    without arguments 
+    without arguments
     """
     main([' '.join(sys.argv[1:])])
+
 
 def main(argv):
     """
@@ -140,6 +139,7 @@ def main(argv):
     except ValueError as ex:
         msg = ex.args[0] if len(ex.args) > 0 else ex
         print(f'Error: {msg}')
+
 
 if __name__ == '__main__':
     tf.compat.v1.app.run(main=main, argv=[' '.join(sys.argv[1:])])
