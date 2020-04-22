@@ -23,26 +23,29 @@ def get_arg_parser():
     """
     Create the argument parser for the converter binary.
     """
-    parser = argparse.ArgumentParser(description='TensorFlow.js Graph Model converter.')
+    parser = argparse.ArgumentParser(
+        description='TensorFlow.js Graph Model converter.')
     parser.add_argument(
         common.CLI_INPUT_PATH,
         nargs='?',
         type=str,
-        help='Path to the TFJS Graph Model directory containing the model.json')
+        help='Path to the TFJS Graph Model directory containing the '
+            'model.json')
     parser.add_argument(
         common.CLI_OUTPUT_PATH,
         nargs='?',
         type=str,
-        help='For output format "{}", a SavedModel target directory. '
-        'For output format "{}", a frozen model file.'.format(
-            common.CLI_SAVED_MODEL, common.CLI_FROZEN_MODEL)
+        help=f'For output format "{common.CLI_SAVED_MODEL}", '
+            'a SavedModel target directory. '
+            f'For output format "{common.CLI_FROZEN_MODEL}", '
+            'a frozen model file.'
     )
     parser.add_argument(
         '--' + common.CLI_OUTPUT_FORMAT,
         type=str,
         default=common.CLI_FROZEN_MODEL,
         choices=set([common.CLI_SAVED_MODEL, common.CLI_FROZEN_MODEL]),
-        help='Output format. Default: {}.'.format(common.CLI_FROZEN_MODEL)
+        help=f'Output format. Default: {common.CLI_FROZEN_MODEL}.'
     )
     default_tag = tf.saved_model.SERVING
     parser.add_argument(
@@ -50,8 +53,8 @@ def get_arg_parser():
         type=str,
         default=default_tag,
         help='Tags of the MetaGraphDef to save, in comma separated string '
-        'format. Defaults to "{}". Applicable only if output format '
-        'is {}'.format(default_tag, common.CLI_SAVED_MODEL)
+        f'format. Defaults to "{default_tag}". Applicable only if output '
+        f'format is {common.CLI_SAVED_MODEL}'
     )
     parser.add_argument(
         '--' + common.CLI_VERSION,
@@ -78,10 +81,10 @@ def convert(arguments):
     """
     args = get_arg_parser().parse_args(arguments)
     if args.show_version:
-        print("\ntfjs_graph_converter {}\n".format(version.VERSION))
+        print(f"\ntfjs_graph_converter {version.VERSION}\n")
         print("Dependency versions:")
-        print("    tensorflow {}".format(tf.version.VERSION))
-        print("    tensorflowjs {}".format(tfjs.__version__))
+        print(f"    tensorflow {tf.version.VERSION}")
+        print(f"    tensorflowjs {tfjs.__version__}")
         return
 
     def info(message, end=None):
@@ -96,9 +99,9 @@ def convert(arguments):
             "Missing output_path argument. For usage, use the --help flag.")
 
     info("TensorFlow.js Graph Model Converter\n")
-    info("Graph model:    {}".format(args.input_path))
-    info("Output:         {}".format(args.output_path))
-    info("Target format:  {}".format(args.output_format))
+    info(f"Graph model:    {args.input_path}")
+    info(f"Output:         {args.output_path}")
+    info(f"Target format:  {args.output_format}")
     info("\nConverting....", end=" ")
 
     start_time = time.perf_counter()
@@ -109,12 +112,11 @@ def convert(arguments):
         api.graph_model_to_saved_model(
             args.input_path, args.output_path, args.saved_model_tags)
     else:
-        raise ValueError(
-            "Unsupported output format: {}".format(args.output_format))
+        raise ValueError(f"Unsupported output format: {args.output_format}")
 
     end_time = time.perf_counter()
     info("Done.")
-    info("Conversion took {0:.3f}s".format(end_time - start_time))
+    info(f"Conversion took {end_time-start_time:.3f}s")
 
     return
 
@@ -137,7 +139,7 @@ def main(argv):
         convert(argv[0].split(' '))
     except ValueError as ex:
         msg = ex.args[0] if len(ex.args) > 0 else ex
-        print('Error: {}'.format(msg))
+        print(f'Error: {msg}')
 
 if __name__ == '__main__':
     tf.compat.v1.app.run(main=main, argv=[' '.join(sys.argv[1:])])
