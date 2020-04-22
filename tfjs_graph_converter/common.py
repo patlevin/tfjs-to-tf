@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2020 Patrick Levin
 # ==============================================================================
+"""Commonly used constants"""
 
 # Keys in the model.json file
 TFJS_NODE_KEY = 'node'
