@@ -9,8 +9,10 @@ from __future__ import unicode_literals
 
 import json
 import os
+from typing import Any, Callable, Dict, List, Tuple
 
 import tensorflow as tf
+import numpy
 
 from tensorflowjs.converters.common import ARTIFACT_MODEL_JSON_FILE_NAME
 from tensorflowjs.converters.common import ARTIFACT_MODEL_TOPOLOGY_KEY
@@ -21,18 +23,23 @@ from google.protobuf.json_format import ParseDict
 
 import tfjs_graph_converter.common as common
 from tfjs_graph_converter.convert_prelu import replace_prelu, split_fused_prelu
-from tfjs_graph_converter.graph_rewrite_util import get_op_def
 from tfjs_graph_converter.graph_rewrite_util import validate_supported_ops
 from tfjs_graph_converter.optimization import optimize_graph
 import tfjs_graph_converter.quirks as quirks
 
+GraphDef = tf.compat.v1.GraphDef
+Tensor = numpy.ndarray
 
-def _parse_path_and_model_json(model_dir):
+
+def _parse_path_and_model_json(model_dir: str) -> Tuple[str, str]:
     """
     Parse model directory name and return path and file name
 
     Args:
         model_dir: Model file path - either directory name or path + file name
+
+    Raises:
+        ValueError: Model or model directory don't exist
 
     Returns:
         Tuple of directory name and model file name (without directory)
@@ -46,20 +53,7 @@ def _parse_path_and_model_json(model_dir):
     raise ValueError(f'Model path is not a directory: {model_dir}')
 
 
-def _verify_supported_ops(op_list):
-    """
-    Verify supported operations and raise an error if the graph
-    contains unsupported layers.
-
-    Args:
-        op_list: Iterable of operation names (strings) contained in the graph
-    """
-    for op_name in op_list:
-        if get_op_def(op_name) is None:
-            raise ValueError(f'Unsupported operation: "{op_name}"')
-
-
-def _convert_graph_def(message_dict):
+def _convert_graph_def(message_dict: Dict[str, Any]) -> GraphDef:
     """
     Convert JSON to TF GraphDef message
 
@@ -73,7 +67,9 @@ def _convert_graph_def(message_dict):
     return ParseDict(message_dict, tf.compat.v1.GraphDef())
 
 
-def _create_graph(graph_def, weight_dict, modifiers):
+def _create_graph(graph_def: GraphDef,
+                  weight_dict: Dict[str, Tensor],
+                  modifiers: Dict[str, Callable]) -> GraphDef:
     """
     Create a TF Graph from nodes
 
@@ -101,7 +97,8 @@ def _create_graph(graph_def, weight_dict, modifiers):
     return optimised_graph
 
 
-def _replace_unsupported_operations(input_graph_def):
+def _replace_unsupported_operations(
+        input_graph_def: GraphDef) -> Tuple[GraphDef, Dict[str, Callable]]:
     """Replace known unsupported operations by rewriting the input graph"""
     weight_modifiers = dict()
     # split fused ops that contain unsupported activations
@@ -113,7 +110,8 @@ def _replace_unsupported_operations(input_graph_def):
     return new_graph, weight_modifiers
 
 
-def _convert_graph_model_to_graph(model_json, base_path):
+def _convert_graph_model_to_graph(model_json: Dict[str, Any],
+                                  base_path: str) -> GraphDef:
     """
     Convert TFJS JSON model to TF Graph
 
@@ -165,13 +163,16 @@ def load_graph_model(model_dir):
     return _convert_graph_model_to_graph(model_json, model_path)
 
 
-def graph_model_to_frozen_graph(model_dir, export_path):
+def graph_model_to_frozen_graph(model_dir: str, export_path: str) -> str:
     """
     Convert a TFJS graph model to a frozen TF graph
 
     Args:
         model_dir: Directory that contains the TFJS JSON model and weights
         export_path: Path to the frozen graph (e.g. './output.pb')
+
+    Returns:
+        The path to the output proto-file.
     """
     export_dir = os.path.dirname(export_path)
     model_name = os.path.basename(export_path)
@@ -180,7 +181,9 @@ def graph_model_to_frozen_graph(model_dir, export_path):
     return tf.io.write_graph(graph, export_dir, model_name, as_text=False)
 
 
-def graph_model_to_saved_model(model_dir, export_dir, tags):
+def graph_model_to_saved_model(model_dir: str,
+                               export_dir: str,
+                               tags: List[str]) -> str:
     """
     Convert a TFJS graph model to a SavedModel
 
@@ -188,6 +191,9 @@ def graph_model_to_saved_model(model_dir, export_dir, tags):
         model_dir: Directory that contains the TFJS JSON model and weights
         export_dir: Target directory to save the TF model in
         tags: Tags for the SavedModel
+
+    Returns:
+        The path to which the model was written.
     """
     graph = load_graph_model(model_dir)
     builder = tf.compat.v1.saved_model.Builder(export_dir)
@@ -197,14 +203,18 @@ def graph_model_to_saved_model(model_dir, export_dir, tags):
     return builder.save()
 
 
-def graph_models_to_saved_model(model_list, export_dir):
+def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
+                                export_dir: str) -> str:
     """
-    Reads multiple TFJS graph models and saves them in a single SavedModel
+    Read multiple TFJS graph models and saves them in a single SavedModel
 
     Args:
         model_list: List of tuples containing TFJS model dir and tags, e.g.
             [("./models/model1", ["step1"]), ("./models/model2": ["step2"])]
         export_dir: Target directory to save the TF model in
+
+    Returns:
+        The path to which the model was written.
     """
     builder = tf.compat.v1.saved_model.Builder(export_dir)
 
