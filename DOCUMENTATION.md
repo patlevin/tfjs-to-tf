@@ -11,6 +11,13 @@ The converter comes with several Python modules:
 * [**tfjs_graph_converter.util**](#tfjs_graph_converter.util)
 * [**tfjs_graph_converter.version**](#tfjs_graph_converter.version)
 * [**tfjs_graph_converter.common**](#tfjs_graph_converter.common)
+* [**tfjs_graph_converter.optimization**](#tfjs_graph_converter.optimization)
+* **tfjs_graph_converter.quirks**
+* **tfjs_graph_converter.graph_rewite_util**
+* **tfjs_graph_converter.convert_prelu**
+
+Non-documented modules are considered private and don't have a stable
+public interface.
 
 ## tfjs_graph_converter.api
 
@@ -185,10 +192,10 @@ with tf.io.gfile.GFile("frozen_model.pb", "rb") as f:
 model_input = tfjs.util.get_input_nodes(graph_def)[0]
 input_shape = model_input.shape
 # extract the width and height of the input dimension (assume "NHWC"-format)
-target_size = input_shape[len(input_shape)-3,-1] if len(input_shape) in (3, 4) else None
+size = input_shape[len(input_shape)-3,-1] if len(input_shape) in (3, 4) else None
 
 # Load an input image according to the dimensions and element type of the model input
-img = tf.keras.preprocessing.image.load_img("image.png", target_size=target_size)
+img = tf.keras.preprocessing.image.load_img("image.png", target_size=size)
 x = tf.keras.preprocessing.image.img_to_array(img, dtype=model_input.dtype)
 # scale pixels to [0..1]
 x /= 255.0
@@ -280,3 +287,24 @@ String that contains the module version.
 ## tfjs_graph_converter.common
 
 Constants used throughout the module.
+
+## tfjs_graph_converter.optimization
+
+This module contains functions to optimize graphs for inference.
+
+### Contents
+
+* [optimize_graph](#tfjs_graph_converter.optimization.optimize_graph)
+
+### tfjs_graph_converter.optimization.optimize_graph
+
+Optimizes a graph for inference and removes unnecessary nodes (e.g. debugging information).
+
+#### Arguments
+
+* **graph:** Tensorflow graph to be optimized for inference
+* **level:** Optimization level (_currently unsupported_)
+
+#### Returns
+
+Graph definition optimized for inference.

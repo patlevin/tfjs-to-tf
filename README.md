@@ -20,13 +20,13 @@ very project).
 
 ## Prerequisites
 
-* tensorflow 1.15.0+
-* tensorflowjs 1.5.0+
+* tensorflow 2.1+
+* tensorflowjs 1.5.2+
 
 ## Compatibility
 
-The converter has been tested with tensorflowjs v1.6.0 and tensorflow v1.15.0.
-The Python version used was Python 3.7.5.
+The converter has been tested with tensorflowjs v1.7.2 and tensorflow v2.1.
+The Python version used was Python 3.7.7.
 
 ## Installation
 
@@ -48,11 +48,23 @@ tensorflow version (e.g. AVX2 or GPU-accelerated) for running the converter.
 
 After the installation, you can run the packaged `tfjs_graph_converter` binary
 for quick and easy model conversion.
-You can get a list of all supported options by using the _--help_ switch:
 
-```sh
-tfjs_graph_converter --help
-```
+### Positional Arguments
+
+ | Positional Argument | Description |
+ | :--- | :--- |
+ | `input_path` | Path to the TFJS Graph Model directory containing the model.json |
+ | `output_path` | For output format "tf_saved_model", a SavedModel target directory. For output format "tf_frozen_model", a frozen model file. |
+
+### Options
+
+| Option | Description |
+| :--- | :--- |
+| `-h`, `--help` | Show help message and exit |
+| `--output_format` | Use `tf_frozen_model` (the default) to save a Tensorflow frozen model. `tf_saved_model` exports to a Tensorflow _SavedModel_ instead. |
+ | `--saved_model_tags` | Specifies the tags of the MetaGraphDef to save, in comma separated string format. Defaults to "serve". Applicable only if `--output format` is `tf_saved_model` |
+ | `-v`, `--version` | Shows the version of the converter and its dependencies. |
+ | `-s`, `--silent` | Suppresses any output besides error messages. |
 
 Alternatively, you can create your own converter programs using the module's API.
 The API is required to accomplish more complicated tasks, like packaging multiple
