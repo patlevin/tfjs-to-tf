@@ -198,6 +198,8 @@ def replace_matching_nodes(input_graph_def: GraphDef,
     weight_modifiers = dict()
     for node in input_graph_def.node:
         if predicate(node):
+            # the name of a replaced node becomes available for use right away
+            del input_node_map[node.name]
             new_nodes = transform(node, input_node_map, weight_modifiers)
             nodes_to_remap[node.name] = new_nodes
             if new_nodes and len(new_nodes) > 0:
@@ -207,9 +209,6 @@ def replace_matching_nodes(input_graph_def: GraphDef,
                 # we need to update the input node map to avoid duplicate names
                 for new_node in new_nodes:
                     input_node_map[new_node.name] = new_node
-            else:
-                # removed node names become available for use
-                del input_node_map[node.name]
     output_graph_def = update_graph_def(input_graph_def, nodes_to_remap,
                                         inputs_to_remap)
     return (output_graph_def, weight_modifiers)

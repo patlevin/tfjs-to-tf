@@ -26,9 +26,20 @@ def _split_fused_op(node: util.NodeDef,
     # We return [Conv2D|MatMul, BiasAdd|BiasAddV1, <Activation>].
     # Unsupported <Activation>-nodes will be dealt with in a separate step
     fused_op_name = node.op[6:]     # remove the '_Fused'-prefix
+    fused_ops = list(s.decode('utf-8') for s in node.attr['fused_ops'].list.s)
     inputs = list(node.input)
-    def node_name(i): return util.generate_name_from(inputs[i], input_node_map)
-    fused_ops = list(node.attr['fused_ops'].list.s)
+    names_used = set()
+
+    def node_name(i):
+        name = util.generate_name_from(inputs[i], input_node_map)
+        if name in names_used:
+            # avoid name collisions by adding the name of the fused operation
+            # (the first name is always unique)
+            name = util.generate_name_from(name, input_node_map,
+                                           suffix=fused_ops[i-2])
+        names_used.add(name)
+        return name
+
     fused_op = util.make_op_node(fused_op_name, inputs[0:2], node_name(1))
     fused_op = util.copy_op_attrs(source=node, target=fused_op)
     bias_add = util.make_op_node(fused_ops[0], [fused_op, inputs[2]],
@@ -52,6 +63,7 @@ def _split_prelu(node: util.NodeList,
 
     def _get_name(suffix):
         return generate_name_from(node.name, input_node_map, suffix=suffix)
+
     # here we need to manually keep node names unique in the sub-graph
     # since we cannot modify input_node_map, because we don't have a node yet
     pos = util.make_op_node('Relu', inputs[0], _get_name('Relu'))
