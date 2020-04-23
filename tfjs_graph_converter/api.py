@@ -11,14 +11,20 @@ import json
 import os
 
 import tensorflow as tf
-import tensorflowjs.converters.common as tfjs_common
+
+from tensorflowjs.converters.common import ARTIFACT_MODEL_JSON_FILE_NAME
+from tensorflowjs.converters.common import ARTIFACT_MODEL_TOPOLOGY_KEY
+from tensorflowjs.converters.common import ARTIFACT_WEIGHTS_MANIFEST_KEY
 
 from tensorflowjs.read_weights import read_weights
 from google.protobuf.json_format import ParseDict
 
 import tfjs_graph_converter.common as common
-import tfjs_graph_converter.quirks as quirks
+from tfjs_graph_converter.convert_prelu import replace_prelu, split_fused_prelu
 from tfjs_graph_converter.graph_rewrite_util import get_op_def
+from tfjs_graph_converter.graph_rewrite_util import validate_supported_ops
+from tfjs_graph_converter.optimization import optimize_graph
+import tfjs_graph_converter.quirks as quirks
 
 
 def _parse_path_and_model_json(model_dir):
@@ -36,25 +42,8 @@ def _parse_path_and_model_json(model_dir):
             raise ValueError(f'Model not found: {model_dir}')
         return os.path.split(model_dir)
     if os.path.isdir(model_dir):
-        return model_dir, tfjs_common.ARTIFACT_MODEL_JSON_FILE_NAME
+        return model_dir, ARTIFACT_MODEL_JSON_FILE_NAME
     raise ValueError(f'Model path is not a directory: {model_dir}')
-
-
-def _get_op_list(message_dict):
-    """
-    Return the set of operations used in the graph.
-
-    Args:
-        message_dict: deserialised JSON message
-
-    Returns:
-        Set of operations in the graph
-    """
-    ops = set()
-    if common.TFJS_NODE_KEY in message_dict:
-        nodes = message_dict[common.TFJS_NODE_KEY]
-        ops = set(node[common.TFJS_OP_KEY] for node in nodes)
-    return ops
 
 
 def _verify_supported_ops(op_list):
@@ -84,26 +73,44 @@ def _convert_graph_def(message_dict):
     return ParseDict(message_dict, tf.compat.v1.GraphDef())
 
 
-def _create_graph(graph_def, weight_dict, op_list):
+def _create_graph(graph_def, weight_dict, modifiers):
     """
     Create a TF Graph from nodes
 
     Args:
         graph_def: TF GraphDef message containing the node graph
         weight_dict: Dictionary from node names to tensor data
-        op_list: Set of operations in the graph
+        modifiers: Operations to be performed on weights before the conversion
+
+    Raises:
+        ValueError: The given graph def contains unsupported operations
 
     Returns:
         TF Graph for inference or saving
     """
     graph = tf.Graph()
-    _verify_supported_ops(op_list)
+    validate_supported_ops(graph_def)
     with tf.compat.v1.Session(graph=graph):
         for key, value in weight_dict.items():
+            if key in modifiers:
+                value = (modifiers[key])(value)
             weight_dict[key] = tf.convert_to_tensor(value)
         tf.graph_util.import_graph_def(graph_def, weight_dict, name='')
 
-    return graph
+    optimised_graph = optimize_graph(graph)
+    return optimised_graph
+
+
+def _replace_unsupported_operations(input_graph_def):
+    """Replace known unsupported operations by rewriting the input graph"""
+    weight_modifiers = dict()
+    # split fused ops that contain unsupported activations
+    new_graph, modifiers = split_fused_prelu(input_graph_def)
+    weight_modifiers.update(modifiers)
+    # replace unsupported activations
+    new_graph, modifiers = replace_prelu(new_graph)
+    weight_modifiers.update(modifiers)
+    return new_graph, weight_modifiers
 
 
 def _convert_graph_model_to_graph(model_json, base_path):
@@ -117,25 +124,25 @@ def _convert_graph_model_to_graph(model_json, base_path):
     Returns:
         TF Graph for inference or saving
     """
-    if tfjs_common.ARTIFACT_MODEL_TOPOLOGY_KEY not in model_json:
-        raise ValueError("model_json is missing key '{}'".format(
-            tfjs_common.ARTIFACT_MODEL_TOPOLOGY_KEY))
+    if ARTIFACT_MODEL_TOPOLOGY_KEY not in model_json:
+        raise ValueError(
+            f"model_json is missing key '{ARTIFACT_MODEL_TOPOLOGY_KEY}'")
 
-    topology = model_json[tfjs_common.ARTIFACT_MODEL_TOPOLOGY_KEY]
+    topology = model_json[ARTIFACT_MODEL_TOPOLOGY_KEY]
 
-    if tfjs_common.ARTIFACT_WEIGHTS_MANIFEST_KEY not in model_json:
-        raise ValueError("model_json is missing key '{}'".format(
-            tfjs_common.ARTIFACT_WEIGHTS_MANIFEST_KEY))
+    if ARTIFACT_WEIGHTS_MANIFEST_KEY not in model_json:
+        raise ValueError(f'{ARTIFACT_MODEL_JSON_FILE_NAME} is missing key '
+                         f"'{ARTIFACT_WEIGHTS_MANIFEST_KEY}'")
 
-    weights_manifest = model_json[tfjs_common.ARTIFACT_WEIGHTS_MANIFEST_KEY]
+    weights_manifest = model_json[ARTIFACT_WEIGHTS_MANIFEST_KEY]
     weight_list = read_weights(weights_manifest, base_path, flatten=True)
 
-    op_list = _get_op_list(topology)
     graph_def = _convert_graph_def(topology)
     name, data = common.TFJS_NAME_KEY, common.TFJS_DATA_KEY
     weight_dict = dict((weight[name], weight[data]) for weight in weight_list)
+    graph_def, weight_modifiers = _replace_unsupported_operations(graph_def)
 
-    return _create_graph(graph_def, weight_dict, op_list)
+    return _create_graph(graph_def, weight_dict, weight_modifiers)
 
 
 def load_graph_model(model_dir):
