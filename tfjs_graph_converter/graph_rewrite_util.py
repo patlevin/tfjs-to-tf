@@ -58,10 +58,8 @@ def make_op_node(op_name: Text, inputs: Inputs, name: Text = None) -> NodeDef:
     """
     input_list = inputs
     # convert scalar input into list
-    if isinstance(inputs, str):
+    if not isinstance(inputs, list):
         input_list = [input_list]
-    else:
-        input_list = [inputs]
     # convert list items to strings
     for i, item in enumerate(input_list):
         if hasattr(item, 'name'):
