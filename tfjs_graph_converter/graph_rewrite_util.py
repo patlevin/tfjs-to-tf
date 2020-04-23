@@ -202,13 +202,16 @@ def replace_matching_nodes(input_graph_def: GraphDef,
         if predicate(node):
             new_nodes = transform(node, input_node_map, weight_modifiers)
             nodes_to_remap[node.name] = new_nodes
-            # by convention, the output of the last node in the returned
-            # sub-graph replaces the output of the original node
-            inputs_to_remap[node.name] = new_nodes[-1].name
-            # we need to update the input node map as well to avoid duplicate
-            # node names
-            for new_node in new_nodes:
-                input_node_map[new_node.name] = new_node
+            if new_nodes and len(new_nodes) > 0:
+                # by convention, the output of the last node in the returned
+                # sub-graph replaces the output of the original node
+                inputs_to_remap[node.name] = new_nodes[-1].name
+                # we need to update the input node map to avoid duplicate names
+                for new_node in new_nodes:
+                    input_node_map[new_node.name] = new_node
+            else:
+                # removed node names become available for use
+                del input_node_map[node.name]
     output_graph_def = update_graph_def(input_graph_def, nodes_to_remap,
                                         inputs_to_remap)
     return (output_graph_def, weight_modifiers)
