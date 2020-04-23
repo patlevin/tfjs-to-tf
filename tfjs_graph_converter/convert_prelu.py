@@ -3,7 +3,7 @@
 """Functions to rewrite Prelu-activations as native TensorFlow operations"""
 
 import tfjs_graph_converter.graph_rewrite_util as util
-from util import generate_name_from as get_name_from
+from tfjs_graph_converter.graph_rewrite_util import generate_name_from
 
 
 def _split_fused_op(node: util.NodeDef,
@@ -51,7 +51,7 @@ def _split_prelu(node: util.NodeList,
     inputs = list(node.input)
 
     def _get_name(suffix):
-        return get_name_from(node.name, input_node_map, suffix=suffix)
+        return generate_name_from(node.name, input_node_map, suffix=suffix)
     # here we need to manually keep node names unique in the sub-graph
     # since we cannot modify input_node_map, because we don't have a node yet
     pos = util.make_op_node('Relu', inputs[0], _get_name('Relu'))
