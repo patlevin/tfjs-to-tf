@@ -71,8 +71,11 @@ def get_input_nodes(graph: Union[tf.Graph, GraphDef]) -> List[NodeInfo]:
         graph_def = graph.as_graph_def()
     else:
         graph_def = graph
-    nodes = [n for n in graph_def.node if n.op == c.TFJS_NODE_PLACEHOLDER_KEY]
-    return [_node_info(node) for node in nodes]
+
+    def is_input(node):
+        return node.op == c.TFJS_NODE_PLACEHOLDER_KEY
+
+    return [_node_info(node) for node in graph_def.node if is_input(node)]
 
 
 def get_output_nodes(graph: Union[tf.Graph, GraphDef]) -> List[NodeInfo]:
