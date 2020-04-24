@@ -5,15 +5,15 @@
 The converter comes with several Python modules:
 
 * **tfjs_graph_converter**
-* [**tfjs_graph_converter.api**](#tfjs_graph_converter.api)
-* [**tfjs_graph_converter.common**](#tfjs_graph_converter.common)
+* [**tfjs_graph_converter.api**](#tfjs_graph_converterapi)
+* [**tfjs_graph_converter.common**](#tfjs_graph_convertercommon)
 * **tfjs_graph_converter.converter**
-* [**tfjs_graph_converter.util**](#tfjs_graph_converter.util)
-* [**tfjs_graph_converter.version**](#tfjs_graph_converter.version)
-* [**tfjs_graph_converter.common**](#tfjs_graph_converter.common)
-* [**tfjs_graph_converter.optimization**](#tfjs_graph_converter.optimization)
+* [**tfjs_graph_converter.util**](#tfjs_graph_converterutil)
+* [**tfjs_graph_converter.version**](#tfjs_graph_converterversion)
+* [**tfjs_graph_converter.common**](#tfjs_graph_convertercommon)
+* [**tfjs_graph_converter.optimization**](#tfjs_graph_converteroptimization)
 * **tfjs_graph_converter.quirks**
-* **tfjs_graph_converter.graph_rewite_util**
+* **tfjs_graph_converter.graph_rewrite_util**
 * **tfjs_graph_converter.convert_prelu**
 
 Non-documented modules are considered private and don't have a stable
@@ -26,10 +26,10 @@ TensorFlow.js graph models to TensorFlow frozen graph and SavedModel formats.
 
 ### Functions
 
-* [load_graph_model](#tfjs_graph_converter.api.load_graph_model)
-* [graph_model_to_frozen_graph](#tfjs_graph_converter.api.graph_model_to_frozen_graph)
-* [graph_model_to_saved_model](#tfjs_graph_converter.api.graph_model_to_saved_model)
-* [graph_models_to_saved_model](#tfjs_graph_converter.api.graph_models_to_saved_model)
+* [load_graph_model](#tfjs_graph_converterapiload_graph_model)
+* [graph_model_to_frozen_graph](#tfjs_graph_converterapigraph_model_to_frozen_graph)
+* [graph_model_to_saved_model](#tfjs_graph_converterapigraph_model_to_saved_model)
+* [graph_models_to_saved_model](#tfjs_graph_converter.apigraph_models_to_saved_model)
 
 ### tfjs_graph_converter.api.load_graph_model
 
@@ -150,10 +150,11 @@ tensor names.
 
 ### Contents
 
-* [NodeInfo](#tfjs_graph_converter.util.NodeInfo)
-* [get_input_nodes](#tfjs_graph_converter.util.get_input_nodes)
-* [get_input_tensors](#fjs_graph_converter.util.get_input_tensors)
-* [get_output_nodes](#tfjs_graph_converter.util.get_output_nodes)
+* [NodeInfo](#tfjs_graph_converterutilNodeInfo)
+* [get_input_nodes](#tfjs_graph_converterutilget_input_nodes)
+* [get_input_tensors](#tfjs_graph_converterutilget_input_tensors)
+* [get_output_nodes](#tfjs_graph_converterutilget_output_nodes)
+* [get_output_tensors](#tfjs_graph_converterutilget_output_tensors)
 
 ### tfjs_graph_converter.util.NodeInfo
 
@@ -294,7 +295,7 @@ This module contains functions to optimize graphs for inference.
 
 ### Contents
 
-* [optimize_graph](#tfjs_graph_converter.optimization.optimize_graph)
+* [optimize_graph](#tfjs_graph_converteroptimizationoptimize_graph)
 
 ### tfjs_graph_converter.optimization.optimize_graph
 
