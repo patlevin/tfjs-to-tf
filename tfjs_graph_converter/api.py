@@ -143,7 +143,7 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
     return _create_graph(graph_def, weight_dict, weight_modifiers)
 
 
-def load_graph_model(model_dir):
+def load_graph_model(model_dir: str) -> GraphDef:
     """
     Load a TFJS Graph Model from a directory
 
