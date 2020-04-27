@@ -4,10 +4,13 @@
 
 from typing import Callable, Dict, List, Optional, Text, Tuple, Union
 
+from tensorflow import as_dtype
 from tensorflow.core.framework.attr_value_pb2 import AttrValue
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.core.framework.node_def_pb2 import NodeDef
 from tensorflow.core.framework.op_def_pb2 import OpDef
+from tensorflow.core.framework.tensor_pb2 import TensorProto
+from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto
 
 from tensorflow.python.framework import dtypes
 from tensorflow.python.framework import op_def_registry
@@ -65,12 +68,38 @@ def make_op_node(op_name: Text, inputs: Inputs, name: Text = None) -> NodeDef:
         if hasattr(item, 'name'):
             input_list[i] = item.name
     # generate node defintion
-    node_def = NodeDef()
-    node_def.op = op_name
-    node_def.name = name or op_name
+    dtype = dtypes.float32.as_datatype_enum
+    node_def = NodeDef(op=op_name, name=name or op_name,
+                       attr={'T': AttrValue(type=dtype)})
     node_def.input.extend(input_list)
-    node_def.attr['T'].CopyFrom(AttrValue(
-        type=dtypes.float32.as_datatype_enum))
+    return node_def
+
+
+def make_const_node(data: Tensor, name: str = None) -> NodeDef:
+    """
+    Create a TF graph node containing a constant value.
+    The resulting node is equivalent to using `tf.constant` on the
+    default graph.
+
+    Args:
+        data: Numpy-array containing the data, shape, and datatype
+        name: Optional name of the node
+
+    Returns:
+        Graph node for adding to a TF Graph instance
+    """
+    dtype = as_dtype(data.dtype).as_datatype_enum
+    tensor_content = data.tobytes()
+    tensor_dim = [TensorShapeProto.Dim(size=size) for size in data.shape]
+    tensor_shape = TensorShapeProto(dim=tensor_dim)
+    tensor_proto = TensorProto(tensor_content=tensor_content,
+                               tensor_shape=tensor_shape,
+                               dtype=dtype)
+    node_def = NodeDef(op='Const', name=name or 'Const',
+                       attr={
+                           'value': AttrValue(tensor=tensor_proto),
+                           'dtype': AttrValue(type=dtype)
+                        })
     return node_def
 
 
@@ -193,9 +222,9 @@ def replace_matching_nodes(input_graph_def: GraphDef,
         the output of the transform function.
     """
     input_node_map = get_input_node_map(input_graph_def)
-    nodes_to_remap = dict()
-    inputs_to_remap = dict()
-    weight_modifiers = dict()
+    nodes_to_remap = {}
+    inputs_to_remap = {}
+    weight_modifiers = {}
     for node in input_graph_def.node:
         if predicate(node):
             # the name of a replaced node becomes available for use right away
@@ -211,7 +240,7 @@ def replace_matching_nodes(input_graph_def: GraphDef,
                     input_node_map[new_node.name] = new_node
     output_graph_def = update_graph_def(input_graph_def, nodes_to_remap,
                                         inputs_to_remap)
-    return (output_graph_def, weight_modifiers)
+    return output_graph_def, weight_modifiers
 
 
 def generate_name_from(base_name: Text,
@@ -237,7 +266,7 @@ def generate_name_from(base_name: Text,
         Root name of the given node name; guaranteed to be unique within the
         graph.
     """
-    base_name = '/'.join(base_name.split('/')[:-1])
+    base_name = '/'.join(base_name.split('/')[:-1]) or base_name
     if suffix:
         base_name = base_name + '/' + suffix
     target_name = base_name
