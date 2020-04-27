@@ -125,7 +125,7 @@ list of nodes. The inputs of all graph nodes are tested against
 given in that parameter.
 
 This does **not** apply to nodes in ``nodes_to_remap``, though! All nodes that
-are valaues of ``nodes_to_remap`` are assumed to already have the correct
+are values of ``nodes_to_remap`` are assumed to already have the correct
 inputs wired into them.
 
 ``get_input_node_map``
