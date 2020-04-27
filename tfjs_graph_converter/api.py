@@ -9,7 +9,7 @@ from __future__ import unicode_literals
 
 import json
 import os
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 import tensorflow as tf
 import numpy
@@ -26,6 +26,7 @@ from tfjs_graph_converter.convert_prelu import replace_prelu, split_fused_prelu
 from tfjs_graph_converter.graph_rewrite_util import validate_supported_ops
 from tfjs_graph_converter.optimization import optimize_graph
 import tfjs_graph_converter.quirks as quirks
+import tfjs_graph_converter.util as util
 
 GraphDef = tf.compat.v1.GraphDef
 Tensor = numpy.ndarray
@@ -93,8 +94,8 @@ def _create_graph(graph_def: GraphDef,
             weight_dict[key] = tf.convert_to_tensor(value)
         tf.graph_util.import_graph_def(graph_def, weight_dict, name='')
 
-    optimised_graph = optimize_graph(graph)
-    return optimised_graph
+    graph_def = optimize_graph(graph)
+    return graph_def_to_graph_v1(graph_def)
 
 
 def _replace_unsupported_operations(
@@ -111,7 +112,7 @@ def _replace_unsupported_operations(
 
 
 def _convert_graph_model_to_graph(model_json: Dict[str, Any],
-                                  base_path: str) -> GraphDef:
+                                  base_path: str) -> tf.Graph:
     """
     Convert TFJS JSON model to TF Graph
 
@@ -143,7 +144,7 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
     return _create_graph(graph_def, weight_dict, weight_modifiers)
 
 
-def load_graph_model(model_dir: str) -> GraphDef:
+def load_graph_model(model_dir: str) -> tf.Graph:
     """
     Load a TFJS Graph Model from a directory
 
@@ -161,6 +162,52 @@ def load_graph_model(model_dir: str) -> GraphDef:
         model_json = json.load(model_file)
 
     return _convert_graph_model_to_graph(model_json, model_path)
+
+
+def graph_def_to_graph_v1(graph_def: GraphDef) -> tf.Graph:
+    """Convert a GraphDef protobuf message to a tf.Graph
+
+    Use this function to convert the graph message returned by
+    `load_graph_model` to a tf.Graph that can be used for inference.
+
+    Args:
+        graph_def: GraphDef protobuf message as returned by `load_graph_model`
+
+    Returns:
+        tf.Graph for inference.
+    """
+    graph = tf.Graph()
+    with tf.compat.v1.Session(graph=graph):
+        tf.graph_util.import_graph_def(graph_def, name='')
+    return graph
+
+
+def graph_to_function_v2(graph: Union[GraphDef, tf.Graph]) -> Callable:
+    """Wrap a GraphDef or TF1 frozen graph in a TF2 function for easy inference
+
+    Use this function to convert a GraphDef returned by `load_graph_model` or
+    a TF v1 frozen graph into a callable TF2 function.
+
+    Args:
+        graph: GraphDef protocol buffer message or TF1 frozen graph
+
+    Returns:
+        The function returns a TF2 wrapped function that is callable with
+        input tensors or `numpy` arrays as arguments and returns a list of
+        model outputs as tensors.
+    """
+    graph_def = graph.as_graph_def() if isinstance(graph, tf.Graph) else graph
+
+    def _imports_graph_def():
+        tf.graph_util.import_graph_def(graph_def, name='')
+
+    wrapped_import = tf.compat.v1.wrap_function(_imports_graph_def, [])
+    import_graph = wrapped_import.graph
+    inputs = util.get_input_tensors(graph_def)
+    outputs = util.get_output_tensors(graph_def)
+    return wrapped_import.prune(
+        tf.nest.map_structure(import_graph.as_graph_element, inputs),
+        tf.nest.map_structure(import_graph.as_graph_element, outputs))
 
 
 def graph_model_to_frozen_graph(model_dir: str, export_path: str) -> str:
