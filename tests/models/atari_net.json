@@ -1,0 +1,770 @@
+{
+  "node": [
+    {
+      "name": "x",
+      "op": "Placeholder",
+      "attr": {
+        "shape": {
+          "shape": {
+            "dim": [
+              {
+                "size": "-1"
+              },
+              {
+                "size": "128"
+              },
+              {
+                "size": "128"
+              },
+              {
+                "size": "3"
+              }
+            ]
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv1/Conv2D/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "8"
+                },
+                {
+                  "size": "8"
+                },
+                {
+                  "size": "3"
+                },
+                {
+                  "size": "32"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv1/Conv2D/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/conv1/Conv2D/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv1/Conv2D",
+      "op": "Conv2D",
+      "input": [
+        "x",
+        "model/conv1/Conv2D/ReadVariableOp"
+      ],
+      "attr": {
+        "dilations": {
+          "list": {
+            "i": [
+              "1",
+              "1",
+              "1",
+              "1"
+            ]
+          }
+        },
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        },
+        "strides": {
+          "list": {
+            "i": [
+              "1",
+              "4",
+              "4",
+              "1"
+            ]
+          }
+        },
+        "use_cudnn_on_gpu": {
+          "b": true
+        },
+        "explicit_paddings": {
+          "list": {}
+        },
+        "padding": {
+          "s": "U0FNRQ=="
+        }
+      }
+    },
+    {
+      "name": "model/conv1/BiasAdd/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "32"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv1/BiasAdd/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/conv1/BiasAdd/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv1/BiasAdd",
+      "op": "BiasAdd",
+      "input": [
+        "model/conv1/Conv2D",
+        "model/conv1/BiasAdd/ReadVariableOp"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        }
+      }
+    },
+    {
+      "name": "model/conv1/Relu",
+      "op": "Relu",
+      "input": [
+        "model/conv1/BiasAdd"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv2/Conv2D/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "4"
+                },
+                {
+                  "size": "4"
+                },
+                {
+                  "size": "32"
+                },
+                {
+                  "size": "64"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv2/Conv2D/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/conv2/Conv2D/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv2/Conv2D",
+      "op": "Conv2D",
+      "input": [
+        "model/conv1/Relu",
+        "model/conv2/Conv2D/ReadVariableOp"
+      ],
+      "attr": {
+        "dilations": {
+          "list": {
+            "i": [
+              "1",
+              "1",
+              "1",
+              "1"
+            ]
+          }
+        },
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        },
+        "strides": {
+          "list": {
+            "i": [
+              "1",
+              "2",
+              "2",
+              "1"
+            ]
+          }
+        },
+        "use_cudnn_on_gpu": {
+          "b": true
+        },
+        "explicit_paddings": {
+          "list": {}
+        },
+        "padding": {
+          "s": "U0FNRQ=="
+        }
+      }
+    },
+    {
+      "name": "model/conv2/BiasAdd/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "64"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv2/BiasAdd/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/conv2/BiasAdd/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv2/BiasAdd",
+      "op": "BiasAdd",
+      "input": [
+        "model/conv2/Conv2D",
+        "model/conv2/BiasAdd/ReadVariableOp"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        }
+      }
+    },
+    {
+      "name": "model/conv2/Relu",
+      "op": "Relu",
+      "input": [
+        "model/conv2/BiasAdd"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv3/Conv2D/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "3"
+                },
+                {
+                  "size": "3"
+                },
+                {
+                  "size": "64"
+                },
+                {
+                  "size": "64"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv3/Conv2D/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/conv3/Conv2D/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv3/Conv2D",
+      "op": "Conv2D",
+      "input": [
+        "model/conv2/Relu",
+        "model/conv3/Conv2D/ReadVariableOp"
+      ],
+      "attr": {
+        "dilations": {
+          "list": {
+            "i": [
+              "1",
+              "1",
+              "1",
+              "1"
+            ]
+          }
+        },
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        },
+        "strides": {
+          "list": {
+            "i": [
+              "1",
+              "1",
+              "1",
+              "1"
+            ]
+          }
+        },
+        "use_cudnn_on_gpu": {
+          "b": true
+        },
+        "explicit_paddings": {
+          "list": {}
+        },
+        "padding": {
+          "s": "U0FNRQ=="
+        }
+      }
+    },
+    {
+      "name": "model/conv3/BiasAdd/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "64"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv3/BiasAdd/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/conv3/BiasAdd/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/conv3/BiasAdd",
+      "op": "BiasAdd",
+      "input": [
+        "model/conv3/Conv2D",
+        "model/conv3/BiasAdd/ReadVariableOp"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        }
+      }
+    },
+    {
+      "name": "model/conv3/Relu",
+      "op": "Relu",
+      "input": [
+        "model/conv3/BiasAdd"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/flatten/Const",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_INT32",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "2"
+                }
+              ]
+            },
+            "tensorContent": "/////wBAAAA="
+          }
+        },
+        "dtype": {
+          "type": "DT_INT32"
+        }
+      }
+    },
+    {
+      "name": "model/flatten/Reshape",
+      "op": "Reshape",
+      "input": [
+        "model/conv3/Relu",
+        "model/flatten/Const"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "Tshape": {
+          "type": "DT_INT32"
+        }
+      }
+    },
+    {
+      "name": "model/dense1/MatMul/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "16384"
+                },
+                {
+                  "size": "512"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/dense1/MatMul/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/dense1/MatMul/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/dense1/MatMul",
+      "op": "MatMul",
+      "input": [
+        "model/flatten/Reshape",
+        "model/dense1/MatMul/ReadVariableOp"
+      ],
+      "attr": {
+        "transpose_b": {
+          "b": false
+        },
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "transpose_a": {
+          "b": false
+        }
+      }
+    },
+    {
+      "name": "model/dense1/BiasAdd/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "512"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/dense1/BiasAdd/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/dense1/BiasAdd/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/dense1/BiasAdd",
+      "op": "BiasAdd",
+      "input": [
+        "model/dense1/MatMul",
+        "model/dense1/BiasAdd/ReadVariableOp"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        }
+      }
+    },
+    {
+      "name": "model/dense1/Relu",
+      "op": "Relu",
+      "input": [
+        "model/dense1/BiasAdd"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/output/MatMul/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "512"
+                },
+                {
+                  "size": "10"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/output/MatMul/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/output/MatMul/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/output/MatMul",
+      "op": "MatMul",
+      "input": [
+        "model/dense1/Relu",
+        "model/output/MatMul/ReadVariableOp"
+      ],
+      "attr": {
+        "transpose_b": {
+          "b": false
+        },
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "transpose_a": {
+          "b": false
+        }
+      }
+    },
+    {
+      "name": "model/output/BiasAdd/ReadVariableOp/resource",
+      "op": "Const",
+      "attr": {
+        "value": {
+          "tensor": {
+            "dtype": "DT_FLOAT",
+            "tensorShape": {
+              "dim": [
+                {
+                  "size": "10"
+                }
+              ]
+            }
+          }
+        },
+        "dtype": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/output/BiasAdd/ReadVariableOp",
+      "op": "Identity",
+      "input": [
+        "model/output/BiasAdd/ReadVariableOp/resource"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "model/output/BiasAdd",
+      "op": "BiasAdd",
+      "input": [
+        "model/output/MatMul",
+        "model/output/BiasAdd/ReadVariableOp"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        },
+        "data_format": {
+          "s": "TkhXQw=="
+        }
+      }
+    },
+    {
+      "name": "model/output/Softmax",
+      "op": "Softmax",
+      "input": [
+        "model/output/BiasAdd"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    },
+    {
+      "name": "Identity",
+      "op": "Identity",
+      "input": [
+        "model/output/Softmax",
+        "^model/conv1/BiasAdd/ReadVariableOp",
+        "^model/conv1/Conv2D/ReadVariableOp",
+        "^model/conv2/BiasAdd/ReadVariableOp",
+        "^model/conv2/Conv2D/ReadVariableOp",
+        "^model/conv3/BiasAdd/ReadVariableOp",
+        "^model/conv3/Conv2D/ReadVariableOp",
+        "^model/dense1/BiasAdd/ReadVariableOp",
+        "^model/dense1/MatMul/ReadVariableOp",
+        "^model/output/BiasAdd/ReadVariableOp",
+        "^model/output/MatMul/ReadVariableOp"
+      ],
+      "attr": {
+        "T": {
+          "type": "DT_FLOAT"
+        }
+      }
+    }
+  ],
+  "versions": {
+    "producer": 175
+  }
+}
