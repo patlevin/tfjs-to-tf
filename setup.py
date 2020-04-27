@@ -11,7 +11,7 @@ with open("./tfjs_graph_converter/version.py", "r") as f:
     exec(f.read(), version)
 
 setuptools.setup(
-    name="tfjs_graph_converter",
+    name="tfjs-graph-converter",
     version=version['__version__'],
     author="Patrick Levin",
     author_email="vertical-pink@protonmail.com",
@@ -28,7 +28,7 @@ setuptools.setup(
     },
     keywords="tensorflow tensorflowjs converter",
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
         "Intended Audience :: Education",
         "Intended Audience :: Science/Research",

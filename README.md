@@ -1,8 +1,10 @@
-# TensorflowJS Graph Model Converter
+# TensorFlow.js Graph Model Converter
+
+![TFJS Graph Converter Logo](/docs/logo.png)
 
 The purpose of this library is to import TFJS graph models into Tensorflow.
-This allows users to use TensorflowJS models with Python in case they don't
-have access to the original formats.
+This allows you to use TensorFlow.js models with Python in case you don't
+have access to the original formats or the models have been created in TFJS.
 
 ## Disclaimer
 
@@ -30,19 +32,9 @@ The Python version used was Python 3.7.7.
 
 ## Installation
 
-To avoid version conflicts I recommend creating a new, clean Python environment.
-Open a shell (or command window) and change to the repository's directory.
-Example using [Anaconda](https://anaconda.org) on Windows, Linux or MacOSX:
-
 ```sh
-conda create --name tfjs python=3.7
-conda activate tfjs
-pip install .
+pip install tfjs-graph-converter
 ```
-
-The tensorflowjs-package installed by pip comes with compatible versions of all
-dependencies (including tensorflow). It is not necessary to install any special
-tensorflow version (e.g. AVX2 or GPU-accelerated) for running the converter.
 
 ## Usage
 
@@ -89,6 +81,6 @@ use with your TensorFlow program (e.g. for inference, fine-tuning, or extending)
 or use the advanced functionality to combine several TFJS models into a single
 `SavedModel`.
 The latter is only supported using the API (it's just a single function call,
-though, so don't panic :D)
+though, so don't panic 😉)
 
-[API Documentation](./DOCUMENTATION.md)
+[API Documentation](./docs/modules.rst)
