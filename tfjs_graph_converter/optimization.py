@@ -96,13 +96,12 @@ def optimize_graph(graph: tf.Graph, level=None) -> GraphDef:
         level: optional optimisation level; currently unsupported
 
     Returns:
-        Optimised graph def for inference or format conversion
+        Optimised ``GraphDef`` message for inference or format conversion
     """
     inputs = get_input_nodes(graph)
     outputs = get_output_nodes(graph)
     signature_def = _build_signature_def(graph, inputs, outputs)
     _mark_outputs_as_train_op(graph, signature_def)
-    # _enable_fused_ops(graph)
     config = ConfigProto()
     _set_optimization_options(config, [
         'debug_stripper', 'remap', 'constfold', 'arithmetic', 'dependency'
