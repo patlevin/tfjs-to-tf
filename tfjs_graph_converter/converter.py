@@ -109,7 +109,7 @@ def convert(arguments):
         api.graph_model_to_frozen_graph(args.input_path, args.output_path)
     elif args.output_format == common.CLI_SAVED_MODEL:
         api.graph_model_to_saved_model(
-            args.input_path, args.output_path, args.saved_model_tags)
+            args.input_path, args.output_path, [x for x in args.saved_model_tags.split(',')])
     else:
         raise ValueError(f"Unsupported output format: {args.output_format}")
 
