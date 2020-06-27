@@ -8,7 +8,7 @@ been rewritten to enable TFJS functions that are not supported in TF.
 ..
 
     The module is considered private to the converter so expect the
-    interface to change between version. Use it at your own risk.
+    interface to change between versions. Use it at your own risk.
 
 .. contents:: **Table of Contents**
     :backlinks: none
