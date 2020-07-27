@@ -90,6 +90,40 @@ __ https://www.tensorflow.org/api_docs/python/tf/Graph
     tf.keras.preprocessing.image.save_img(OUTPUT_IMAGE, stylised)
 
 
+``load_graph_model_and_signature``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+   load_graph_model_and_signature(
+        model_dir: str
+   ) -> Tuple[tf.Graph, Optional[SignatureDef]]
+
+Loads a tensorflowjs graph model from a directory and returns a TF v1
+`tf.Graph`__ that can be used for inference along with a TF `SignatureDef`__
+that contains the inputs and outputs of the model.
+
+..
+
+    **Arguments:**
+
+**model_dir**
+    The directory that contains the ``model.json`` file.
+    Alternatively, the path and name of the JSON file can be
+    specified directly. Weight files must be located in the
+    same directory as the model file.
+
+..
+
+    **Returns:**
+
+``tf.Graph`` that contains the frozen graph and all model weights and the
+model signature, if present in the meta data or inferred from the graph. 
+
+__ https://www.tensorflow.org/api_docs/python/tf/Graph
+__ https://www.tensorflow.org/versions/r1.15/api_docs/python/tf/saved_model/predict_signature_def
+
+
 ``graph_def_to_graph_v1``
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

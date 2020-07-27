@@ -192,3 +192,49 @@ determine the names of requested model outputs.
     **Example:**
 
 See `get_input_tensors`_ for an example.
+
+
+``infer_signature``
+^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+   infer_signature(
+        graph: Union[tf.Graph, GraphDef]
+   ) -> Optional[SignatureDef]
+
+Analyzes the given frozen graph or ``GraphDef`` message and returns the
+``SignatureDef`` for use with TF ``SavedModel``.
+
+..
+
+    **Arguments:**
+
+**graph**
+    Frozen graph or ``GraphDef`` message.
+
+..
+
+    **Returns:**
+
+``SignatureDef`` containing the inputs and outputs of the model. The method
+name is fixed to the TF default prediction model signature name. ``None`` is
+returned, if no output tensor shape could be determined.
+
+..
+
+    **Example:**
+
+.. code:: python
+
+    import tensorflow as tf
+    import tfjs_graph_converter.api as tfjs
+    import tfjs_graph_converter.util as tfjs_util
+
+    MODEL_PATH = '~/models/tfjs_model/'
+
+    # load tfjs graph model and get the signature
+    graph = tfjs.load_graph_model(MODEL_PATH)
+    signature_def = tfjs_util.infer_signature(graph)
+    # change the signature name, e.g. for use with saved_model 
+    signature_def.method_name = 'my_model/predict'
