@@ -9,7 +9,7 @@ from __future__ import unicode_literals
 
 import json
 import os
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 import numpy
@@ -17,6 +17,8 @@ import numpy
 from tensorflowjs.converters.common import ARTIFACT_MODEL_JSON_FILE_NAME
 from tensorflowjs.converters.common import ARTIFACT_MODEL_TOPOLOGY_KEY
 from tensorflowjs.converters.common import ARTIFACT_WEIGHTS_MANIFEST_KEY
+from tensorflowjs.converters.common import SIGNATURE_KEY
+from tensorflowjs.converters.common import USER_DEFINED_METADATA_KEY
 
 from tensorflowjs.read_weights import read_weights
 from google.protobuf.json_format import ParseDict
@@ -68,6 +70,38 @@ def _convert_graph_def(message_dict: Dict[str, Any]) -> GraphDef:
     return ParseDict(message_dict, tf.compat.v1.GraphDef())
 
 
+def _extract_signature_def(model_json: Dict[str, Any]
+                           ) -> Optional[util.SignatureDef]:
+    """
+    Extract the signature definition from the model's meta data.
+
+    Args:
+        model_json: JSON dict from TFJS model file
+
+    Returns:
+        TF SignatureDef proto; None if meta data is missing or incomplete
+    """
+    # three possible scenarios:
+    #   1. meta data contains a valid signature w/ inputs and outputs
+    #   2. meta data contains incomplete signature (missing in- or outputs)
+    #   3. meta data is missing or doesn't contain signature
+    # this function works for scenario 1)
+    if USER_DEFINED_METADATA_KEY not in model_json:
+        return None
+    meta_data = model_json[USER_DEFINED_METADATA_KEY]
+    if SIGNATURE_KEY not in meta_data:
+        return None
+    signature = meta_data[SIGNATURE_KEY]
+    if tf.saved_model.PREDICT_INPUTS not in signature:
+        return None
+    if tf.saved_model.PREDICT_OUTPUTS not in signature:
+        return None
+    signature_def = ParseDict(signature, util.SignatureDef())
+    if len(signature_def.method_name) == 0:
+        signature_def.method_name = tf.saved_model.PREDICT_METHOD_NAME
+    return signature_def
+
+
 def _create_graph(graph_def: GraphDef,
                   weight_dict: Dict[str, Tensor],
                   modifiers: Dict[str, Callable]) -> GraphDef:
@@ -112,7 +146,8 @@ def _replace_unsupported_operations(
 
 
 def _convert_graph_model_to_graph(model_json: Dict[str, Any],
-                                  base_path: str) -> tf.Graph:
+                                  base_path: str
+                                  ) -> Tuple[tf.Graph, util.SignatureDef]:
     """
     Convert TFJS JSON model to TF Graph
 
@@ -121,7 +156,7 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
         base_path:  Path to the model file (where to find the model weights)
 
     Returns:
-        TF Graph for inference or saving
+        Tuple of TF Graph for inference or saving and TF signature definition
     """
     if ARTIFACT_MODEL_TOPOLOGY_KEY not in model_json:
         raise ValueError(
@@ -141,7 +176,30 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
     weight_dict = dict((weight[name], weight[data]) for weight in weight_list)
     graph_def, weight_modifiers = _replace_unsupported_operations(graph_def)
 
-    return _create_graph(graph_def, weight_dict, weight_modifiers)
+    graph = _create_graph(graph_def, weight_dict, weight_modifiers)
+    signature_def = _extract_signature_def(model_json) or util.infer_signature(
+        graph)
+    return (graph, signature_def)
+
+
+def load_graph_model_and_signature(model_dir: str
+                                   ) -> Tuple[tf.Graph, util.SignatureDef]:
+    """
+    Load a TFJS Graph Model from a directory
+
+    Args:
+        model_dir: Directory that contains the tfjs model.json and weights;
+                alternatively name and path of the model.json if the name
+                differs from the default ("model.json")
+
+    Returns:
+        Tupel of TF frozen graph for inference or saving and TF signature def
+    """
+    model_path, model_name = _parse_path_and_model_json(model_dir)
+    model_file_path = os.path.join(model_path, model_name)
+    with open(model_file_path, "r") as model_file:
+        model_json = json.load(model_file)
+    return _convert_graph_model_to_graph(model_json, model_path)
 
 
 def load_graph_model(model_dir: str) -> tf.Graph:
@@ -156,12 +214,8 @@ def load_graph_model(model_dir: str) -> tf.Graph:
     Returns:
         TF frozen graph for inference or saving
     """
-    model_path, model_name = _parse_path_and_model_json(model_dir)
-    model_file_path = os.path.join(model_path, model_name)
-    with open(model_file_path, "r") as model_file:
-        model_json = json.load(model_file)
-
-    return _convert_graph_model_to_graph(model_json, model_path)
+    graph, _ = load_graph_model_and_signature(model_dir)
+    return graph
 
 
 def graph_def_to_graph_v1(graph_def: GraphDef) -> tf.Graph:
@@ -242,11 +296,14 @@ def graph_model_to_saved_model(model_dir: str,
     Returns:
         The path to which the model was written.
     """
-    graph = load_graph_model(model_dir)
+    graph, signature_def = load_graph_model_and_signature(model_dir)
     builder = tf.compat.v1.saved_model.Builder(export_dir)
-
+    signature_map = {
+        tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
+    }
     with tf.compat.v1.Session(graph=graph) as sess:
-        builder.add_meta_graph_and_variables(sess, tags=tags)
+        builder.add_meta_graph_and_variables(sess, tags=tags,
+                                             signature_def_map=signature_map)
     return builder.save()
 
 
@@ -266,13 +323,20 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
     builder = tf.compat.v1.saved_model.Builder(export_dir)
 
     model_dir, tags = model_list[0]
-    graph = load_graph_model(model_dir)
+    graph, signature_def = load_graph_model_and_signature(model_dir)
+    signature_map = {
+        tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
+    }
     with tf.compat.v1.Session(graph=graph) as sess:
-        builder.add_meta_graph_and_variables(sess, tags=tags)
+        builder.add_meta_graph_and_variables(sess, tags=tags,
+                                             signature_def_map=signature_map)
 
     for model_dir, tags in model_list[1:]:
-        graph = load_graph_model(model_dir)
+        graph, signature_def = load_graph_model_and_signature(model_dir)
+        signature_map = {
+            tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
+        }
         with tf.compat.v1.Session(graph=graph):
-            builder.add_meta_graph(tags=tags)
+            builder.add_meta_graph(tags=tags, signature_def_map=signature_map)
 
     return builder.save()
