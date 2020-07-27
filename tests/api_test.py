@@ -10,6 +10,11 @@ import numpy as np
 import tensorflow as tf
 
 from tfjs_graph_converter import api
+from tfjs_graph_converter import util
+from tensorflow.core.protobuf import meta_graph_pb2
+from tensorflow.core.protobuf import saved_model_pb2
+from tensorflow.python.saved_model import constants
+
 import testutils
 
 
@@ -20,6 +25,26 @@ def as_scalar(tensor_array: list) -> float:
     value = tensor_array[0].numpy()
     value = np.reshape(value, (1))
     return value[0]
+
+
+def load_meta_graph(export_dir: str, tags: list
+                    ) -> meta_graph_pb2.MetaGraphDef:
+    path_to_pb = os.path.join(export_dir, constants.SAVED_MODEL_FILENAME_PB)
+    # load from disk
+    with tf.io.gfile.GFile(path_to_pb, 'rb') as f:
+        saved_model = saved_model_pb2.SavedModel()
+        saved_model.ParseFromString(f.read())
+    # match tags
+    if tags is None or len(tags) == 0:
+        if len(saved_model.meta_graphs) == 1:
+            return saved_model.meta_graphs[0]
+        else:
+            raise ValueError('tags are required - multiple meta graphs found')
+    else:
+        for meta_graph_def in saved_model.meta_graphs:
+            if set(meta_graph_def.meta_info_def.tags) == set(tags):
+                return meta_graph_def
+        return None
 
 
 class ApiTest(unittest.TestCase):
@@ -112,17 +137,24 @@ class ApiTest(unittest.TestCase):
 
     def test_graph_model_to_saved_model(self):
         """graph_model_to_saved_model should save valid SavedModel"""
-        model_dir = testutils.get_path_to(testutils.SIMPLE_MODEL_PATH_NAME)
+        model_dir = testutils.get_path_to(testutils.PRELU_MODEL_PATH)
         export_dir = tempfile.mkdtemp(suffix='.saved_model')
         try:
-            tags = ['serving_default']
+            tags = [tf.saved_model.SERVING]
             api.graph_model_to_saved_model(model_dir, export_dir,
                                            tags=tags)
             self.assertTrue(os.path.exists(export_dir))
-            # must be valid model; tf.saved_model.contains_saved_model is
-            # insufficient
-            imported = tf.saved_model.load(export_dir, tags=tags)
-            self.assertIsNotNone(imported.graph)
+            self.assertTrue(tf.saved_model.contains_saved_model(export_dir))
+            # try and load the model
+            meta_graph_def = load_meta_graph(export_dir, tags)
+            self.assertIsNotNone(meta_graph_def)
+            # we also want a signature to be present
+            self.assertGreater(len(meta_graph_def.signature_def), 0)
+            # the signatures should be valid
+            for signature_def in meta_graph_def.signature_def.values():
+                self.assertGreater(len(signature_def.inputs), 0)
+                self.assertGreater(len(signature_def.outputs), 0)
+                self.assertGreater(len(signature_def.method_name), 0)
         finally:
             if os.path.exists(export_dir):
                 shutil.rmtree(export_dir)
@@ -131,8 +163,8 @@ class ApiTest(unittest.TestCase):
         """graph_models_to_saved_model should accept model list"""
         model_dir_1 = testutils.get_path_to(testutils.SIMPLE_MODEL_PATH_NAME)
         model_dir_2 = testutils.get_path_to(testutils.PRELU_MODEL_PATH)
-        tags_1 = ['serving_default', 'model_1']
-        tags_2 = ['serving_default', 'model_2']
+        tags_1 = [tf.saved_model.SERVING, 'model_1']
+        tags_2 = [tf.saved_model.SERVING, 'model_2']
         export_dir = tempfile.mkdtemp(suffix='.saved_model')
         try:
             api.graph_models_to_saved_model([
@@ -141,14 +173,49 @@ class ApiTest(unittest.TestCase):
                                             ], export_dir)
             self.assertTrue(os.path.exists(export_dir))
             # try to load model 1
-            model = tf.saved_model.load(export_dir, tags=tags_1)
-            self.assertIsNotNone(model.graph)
-            # try toload model 2
-            model = tf.saved_model.load(export_dir, tags=tags_2)
-            self.assertIsNotNone(model.graph)
+            meta_graph_def = load_meta_graph(export_dir, tags_1)
+            self.assertIsNotNone(meta_graph_def)
+            # we also want a signature to be present
+            self.assertGreater(len(meta_graph_def.signature_def), 0)
+            # the signatures should be valid
+            for signature_def in meta_graph_def.signature_def.values():
+                self.assertGreater(len(signature_def.inputs), 0)
+                self.assertGreater(len(signature_def.outputs), 0)
+                self.assertGreater(len(signature_def.method_name), 0)
+            # try to load model 2
+            meta_graph_def = load_meta_graph(export_dir, tags_2)
+            self.assertIsNotNone(meta_graph_def)
+            # we also want a signature to be present
+            self.assertGreater(len(meta_graph_def.signature_def), 0)
+            # the signatures should be valid
+            for signature_def in meta_graph_def.signature_def.values():
+                self.assertGreater(len(signature_def.inputs), 0)
+                self.assertGreater(len(signature_def.outputs), 0)
+                self.assertGreater(len(signature_def.method_name), 0)
         finally:
             if os.path.exists(export_dir):
                 shutil.rmtree(export_dir)
+
+    def test_load_graph_model_and_signature_from_meta_data(self):
+        """load_graph_model_and_signature should extract signature def"""
+        _, signature_def = api.load_graph_model_and_signature(
+            testutils.get_path_to(testutils.PRELU_MODEL_PATH))
+        self.assertIsInstance(signature_def, util.SignatureDef)
+        self.assertGreater(len(signature_def.inputs), 0)
+        self.assertGreater(len(signature_def.outputs), 0)
+        self.assertGreater(len(signature_def.method_name), 0)
+
+    def test_load_graph_model_and_signature_from_tree(self):
+        """load_graph_model_and_signature should infer signature def
+           from graph if signature def is incomplete
+        """
+        _, signature_def = api.load_graph_model_and_signature(
+            testutils.get_path_to(testutils.SIMPLE_MODEL_PATH_NAME))
+        # simple model is missing inputs in signature - defer from graph
+        self.assertIsInstance(signature_def, util.SignatureDef)
+        self.assertGreater(len(signature_def.inputs), 0)
+        self.assertGreater(len(signature_def.outputs), 0)
+        self.assertGreater(len(signature_def.method_name), 0)
 
 
 if __name__ == '__main__':

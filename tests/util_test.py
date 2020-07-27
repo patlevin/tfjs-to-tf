@@ -47,6 +47,15 @@ class UtilTest(unittest.TestCase):
         expected = [(n.name+':0') for n in testutils.get_outputs(graph_def)]
         self.assertEqual(actual, expected)
 
+    def test_infer_signature(self):
+        """Should return valid SignatureDef from TF Graph"""
+        graph_def = testutils.get_sample_graph()
+        signature_def = util.infer_signature(graph_def)
+        self.assertIsInstance(signature_def, util.SignatureDef)
+        self.assertGreater(len(signature_def.inputs), 0)
+        self.assertGreater(len(signature_def.outputs), 0)
+        self.assertGreater(len(signature_def.method_name), 0)
+
 
 if __name__ == '__main__':
     unittest.main()
