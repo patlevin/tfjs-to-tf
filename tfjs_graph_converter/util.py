@@ -10,8 +10,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.core.framework.node_def_pb2 import NodeDef
-from tensorflow_core.core.protobuf.meta_graph_pb2 import SignatureDef
-from tensorflow_core.core.protobuf.meta_graph_pb2 import TensorInfo
+from tensorflow.core.protobuf.meta_graph_pb2 import SignatureDef
+from tensorflow.core.protobuf.meta_graph_pb2 import TensorInfo
 
 import tfjs_graph_converter.common as c
 
