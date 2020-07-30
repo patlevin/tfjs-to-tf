@@ -4,7 +4,7 @@
 from __future__ import absolute_import
 
 from collections import namedtuple
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import tensorflow as tf
@@ -53,30 +53,10 @@ def _get_shape(node: NodeDef) -> List[int]:
     return [size(dim) for dim in shape(node.attr[c.TFJS_ATTR_SHAPE_KEY])]
 
 
-def _get_tensor_shape(node: NodeDef) -> List[int]:
-    def shape(attr): return attr.tensor.tensor_shape.dim if attr else None
-    def size(dim): return dim.size if dim.size > 0 else None
-    return [size(dim) for dim in shape(node.attr[c.TFJS_ATTR_VALUE_KEY])]
-
-
 def _node_info(node: NodeDef) -> NodeInfo:
     def dtype(n): return _map_type(n.attr[c.TFJS_ATTR_DTYPE_KEY].type)
     return NodeInfo(name=node.name, shape=_get_shape(node), dtype=dtype(node),
                     tensor=node.name + ':0')
-
-
-def _tensor_info(node: NodeDef) -> NodeInfo:
-    def dtype(n): return _map_type(n.attr[c.TFJS_ATTR_DTYPE_KEY].type)
-    return NodeInfo(name=node.name, shape=_get_tensor_shape(node),
-                    dtype=dtype(node), tensor=node.name + ':0')
-
-
-def _get_node_map(graph: Union[tf.Graph, GraphDef]) -> Dict[str, NodeDef]:
-    if isinstance(graph, tf.Graph):
-        graph_def = graph.as_graph_def()
-    else:
-        graph_def = graph
-    return {node.name: node for node in graph_def.node}
 
 
 def get_input_nodes(graph: Union[tf.Graph, GraphDef]) -> List[NodeInfo]:
@@ -157,8 +137,7 @@ def get_output_tensors(graph: Union[tf.Graph, GraphDef]) -> List[str]:
     return [node.tensor for node in get_output_nodes(graph)]
 
 
-def infer_signature(graph: Union[tf.Graph, GraphDef]
-                    ) -> Optional[SignatureDef]:
+def infer_signature(graph: tf.Graph) -> Optional[SignatureDef]:
     """
     Return the graph's signature (inputs and outputs) as a TF SignatureDef.
 
@@ -168,31 +147,19 @@ def infer_signature(graph: Union[tf.Graph, GraphDef]
     Returns:
         TF SignatureDef from Graph; None, iff signature couldn't be inferred
     """
-    def _build_tensor_info(node_info: NodeInfo) -> TensorInfo:
-        if node_info is not None:
+    def _build_tensor_info(info: NodeInfo) -> TensorInfo:
+        if info is not None:
+            tensor = graph.get_tensor_by_name(info.tensor)
             return TensorInfo(
-                dtype=tf.dtypes.as_dtype(node_info.dtype).as_datatype_enum,
-                tensor_shape=tf.TensorShape(node_info.shape).as_proto(),
-                name=node_info.tensor)
+                dtype=tf.dtypes.as_dtype(tensor.dtype).as_datatype_enum,
+                tensor_shape=tf.TensorShape(tensor.shape).as_proto(),
+                name=info.tensor)
         else:
             return None
 
-    def _get_tensor_shape_info(nodes: Dict[str, NodeDef], info: NodeInfo
-                               ) -> TensorInfo:
-        # heuristic: take the LAST input (skip control inputs) while op!=Const
-        #            and tensor shape not set
-        name = info.name
-        if nodes[name].op in ('Identity', 'Const') and len(info.shape) > 0:
-            return info
-        input_node = [n for n in reversed(nodes[name].input) if n[0] != '^'][0]
-        return _get_tensor_shape_info(nodes, _tensor_info(nodes[input_node]))
-
-    nodes = _get_node_map(graph)
-    inputs = {info.tensor: _build_tensor_info(info)
+    inputs = {info.name: _build_tensor_info(info)
               for info in get_input_nodes(graph)}
-    # outputs are tricky - infer the shape from their inputs
-    outputs = {info.tensor: _build_tensor_info(_get_tensor_shape_info(nodes,
-                                               info))
+    outputs = {info.name: _build_tensor_info(info)
                for info in get_output_nodes(graph)}
     if all(tensor_info is not None for tensor_info in outputs.values()):
         # only valid if we could infer all output shapes

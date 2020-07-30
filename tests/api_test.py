@@ -47,6 +47,10 @@ def load_meta_graph(export_dir: str, tags: list
         return None
 
 
+def _shape_of(tensor_info):
+    return tuple(dim.size for dim in tensor_info.tensor_shape.dim)
+
+
 class ApiTest(unittest.TestCase):
     def test_load_graph_model_with_simple_model(self):
         """load_graph_model should load simple model"""
@@ -201,8 +205,20 @@ class ApiTest(unittest.TestCase):
         _, signature_def = api.load_graph_model_and_signature(
             testutils.get_path_to(testutils.PRELU_MODEL_PATH))
         self.assertIsInstance(signature_def, util.SignatureDef)
-        self.assertGreater(len(signature_def.inputs), 0)
-        self.assertGreater(len(signature_def.outputs), 0)
+        self.assertTrue(tf.compat.v1.saved_model.is_valid_signature(
+            signature_def))
+        self.assertEqual(len(signature_def.inputs), 1)
+        key, value = list(signature_def.inputs.items())[0]
+        self.assertEqual(key, 'input_1')
+        self.assertEqual(value.name, 'input_1:0')
+        self.assertEqual(value.dtype, tf.dtypes.float32)
+        self.assertEqual(_shape_of(value), (-1, 7))
+        self.assertEqual(len(signature_def.outputs), 1)
+        key, value = list(signature_def.outputs.items())[0]
+        self.assertEqual(key, 'Identity')
+        self.assertEqual(value.name, 'Identity:0')
+        self.assertEqual(value.dtype, tf.dtypes.float32)
+        self.assertEqual(_shape_of(value), (-1, 1))
         self.assertGreater(len(signature_def.method_name), 0)
 
     def test_load_graph_model_and_signature_from_tree(self):
@@ -213,8 +229,20 @@ class ApiTest(unittest.TestCase):
             testutils.get_path_to(testutils.SIMPLE_MODEL_PATH_NAME))
         # simple model is missing inputs in signature - defer from graph
         self.assertIsInstance(signature_def, util.SignatureDef)
-        self.assertGreater(len(signature_def.inputs), 0)
-        self.assertGreater(len(signature_def.outputs), 0)
+        self.assertTrue(tf.compat.v1.saved_model.is_valid_signature(
+            signature_def))
+        self.assertEqual(len(signature_def.inputs), 1)
+        key, value = list(signature_def.inputs.items())[0]
+        self.assertEqual(key, 'x')
+        self.assertEqual(value.name, 'x:0')
+        self.assertEqual(value.dtype, tf.dtypes.float32)
+        self.assertEqual(_shape_of(value), (-1, 1))
+        self.assertEqual(len(signature_def.outputs), 1)
+        key, value = list(signature_def.outputs.items())[0]
+        self.assertEqual(key, 'Identity')
+        self.assertEqual(value.name, 'Identity:0')
+        self.assertEqual(value.dtype, tf.dtypes.float32)
+        self.assertEqual(_shape_of(value), (-1, 1))
         self.assertGreater(len(signature_def.method_name), 0)
 
 

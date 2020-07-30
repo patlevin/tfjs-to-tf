@@ -3,8 +3,13 @@
 """Unit tests for the utility functions"""
 import unittest
 
+import tensorflow as tf
 from tfjs_graph_converter import util
 import testutils
+
+
+def _shape_of(tensor_info):
+    return tuple(dim.size for dim in tensor_info.tensor_shape.dim)
 
 
 class UtilTest(unittest.TestCase):
@@ -52,9 +57,22 @@ class UtilTest(unittest.TestCase):
         graph_def = testutils.get_sample_graph()
         signature_def = util.infer_signature(graph_def)
         self.assertIsInstance(signature_def, util.SignatureDef)
-        self.assertGreater(len(signature_def.inputs), 0)
-        self.assertGreater(len(signature_def.outputs), 0)
-        self.assertGreater(len(signature_def.method_name), 0)
+        self.assertTrue(tf.compat.v1.saved_model.is_valid_signature(
+            signature_def))
+        # verify inputs
+        self.assertEqual(len(signature_def.inputs), 1)
+        key, value = list(signature_def.inputs.items())[0]
+        self.assertEqual(key, 'x')
+        self.assertEqual(value.name, 'x:0')
+        self.assertEqual(value.dtype, tf.dtypes.float32)
+        self.assertEqual(_shape_of(value), (-1, 128, 128, 3))
+        # verify outputs
+        self.assertEqual(len(signature_def.outputs), 1)
+        key, value = list(signature_def.outputs.items())[0]
+        self.assertEqual(key, 'Identity')
+        self.assertEqual(value.name, 'Identity:0')
+        self.assertEqual(value.dtype, tf.dtypes.float32)
+        self.assertEqual(_shape_of(value), (-1, 10))
 
 
 if __name__ == '__main__':

@@ -99,6 +99,15 @@ def _extract_signature_def(model_json: Dict[str, Any]
     signature_def = ParseDict(signature, util.SignatureDef())
     if len(signature_def.method_name) == 0:
         signature_def.method_name = tf.saved_model.PREDICT_METHOD_NAME
+
+    def _remove_channel_from_key(mapfield):
+        names_to_fix = [key for key in mapfield if key.endswith(':0')]
+        for name in names_to_fix:
+            mapfield[name[0:-2]].CopyFrom(mapfield[name])
+            del mapfield[name]
+
+    _remove_channel_from_key(signature_def.inputs)
+    _remove_channel_from_key(signature_def.outputs)
     return signature_def
 
 

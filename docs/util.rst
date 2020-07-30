@@ -200,10 +200,10 @@ See `get_input_tensors`_ for an example.
 .. code:: python
 
    infer_signature(
-        graph: Union[tf.Graph, GraphDef]
+        graph: tf.Graph
    ) -> Optional[SignatureDef]
 
-Analyzes the given frozen graph or ``GraphDef`` message and returns the
+Analyzes the given TF Graph instance and returns the
 ``SignatureDef`` for use with TF ``SavedModel``.
 
 ..
@@ -211,7 +211,7 @@ Analyzes the given frozen graph or ``GraphDef`` message and returns the
     **Arguments:**
 
 **graph**
-    Frozen graph or ``GraphDef`` message.
+    TF graph instance.
 
 ..
 
