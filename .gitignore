@@ -3,3 +3,5 @@
 build/
 dist/
 *.egg-info/
+tests/models/
+!tests/models/readme.txt
