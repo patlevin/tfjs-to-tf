@@ -20,6 +20,7 @@ from tfjs_graph_converter.optimization import optimize_graph
 from testutils import GraphDef, model_to_graph, get_outputs
 from testutils import SAMPLE_MODEL_FILE_NAME, SIMPLE_MODEL_PATH_NAME
 from testutils import PRELU_MODEL_PATH, MULTI_HEAD_PATH
+from testutils import get_path_to
 
 
 def deepmind_atari_net(num_classes: int = 10,
@@ -52,15 +53,15 @@ def deepmind_atari_net(num_classes: int = 10,
 
 def simple_model():
     """Generate a single layer model that predicts y=5x"""
-    inp = Input(shape=[1])
+    inp = Input(shape=[1], name='x')
     out = Dense(1, name='output')(inp)
     model = Model(inp, out, name='simple_5x')
     model.compile(optimizer='sgd', loss='mean_squared_error')
     # train the model
-    xs = np.concatenate((np.arange(10), [1, 5, 9]))
+    xs = np.concatenate((np.arange(17), [1, 5, 9]))
     np.random.shuffle(xs)
     ys = xs * 5
-    print('Training the model... ', end='')
+    print('Training the model... ', end='', flush=True)
     model.fit(xs, ys, epochs=500, verbose=0)
     print('done.')
     return model
@@ -71,7 +72,7 @@ def prelu_classifier_model():
     Toy model that classifies whether a point is inside a sphere given the
     sphere's centre and radius as well as a sample point.
     """
-    inp = Input(shape=[7])   # cx,cy,cz,r,px,py,pz
+    inp = Input(shape=[7], name='input_vector')   # cx,cy,cz,r,px,py,pz
     x = Dense(3, name='Dense')(inp)
     x = PReLU(name='Prelu')(x)
     out = Dense(1, activation='sigmoid', name='Output')(x)
@@ -103,7 +104,7 @@ def prelu_classifier_model():
     np.random.shuffle(data)
     xs = data[:, 0:7]
     ys = data[:, 7]
-    print('Training the model... ', end='')
+    print('Training the model... ', end='', flush=True)
     model.fit(xs, ys, epochs=250, batch_size=32, verbose=0)
     print('done.')
     return model
@@ -176,13 +177,13 @@ def save_keras_model(model: Callable, path: str) -> None:
 if __name__ == '__main__':
     print('Generating multi-layer sample model...')
     model = deepmind_atari_net(10, input_shape=(128, 128, 3))
-    save_tf_model(model, SAMPLE_MODEL_FILE_NAME)
+    save_tf_model(model, get_path_to(SAMPLE_MODEL_FILE_NAME))
     print('Generating single-layer simple model...')
     model = simple_model()
-    save_tfjs_model(model, SIMPLE_MODEL_PATH_NAME)
+    save_tfjs_model(model, get_path_to(SIMPLE_MODEL_PATH_NAME))
     print('Generating prelu-activation model...')
     model = prelu_classifier_model()
-    save_keras_model(model, PRELU_MODEL_PATH)
+    save_keras_model(model, get_path_to(PRELU_MODEL_PATH))
     print('Generating multi-head model...')
     model = multi_head_model()
-    save_tfjs_model(model, MULTI_HEAD_PATH)
+    save_tfjs_model(model, get_path_to(MULTI_HEAD_PATH))
