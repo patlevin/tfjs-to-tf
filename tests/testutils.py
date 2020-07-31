@@ -18,6 +18,8 @@ SIMPLE_MODEL_PATH_NAME = './models/simple/'
 SIMPLE_MODEL_FILE_NAME = './models/simple/frozen_graph.pb'
 PRELU_MODEL_PATH = './models/prelu/'
 PRELU_MODEL_FILE = './models/prelu/keras.h5'
+MULTI_HEAD_PATH = './models/multi_head/'
+MULTI_HEAD_FILE = './models/multi_head/frozen_graph.pb'
 
 
 def get_inputs(graph_def: GraphDef) -> List[NodeDef]:

@@ -2,6 +2,7 @@
 # Copyright © 2020 Patrick Levin
 """Generates a models for unit testing"""
 
+from pathlib import Path
 from typing import Callable, Iterable
 import os
 import random
@@ -18,7 +19,7 @@ from tfjs_graph_converter.optimization import optimize_graph
 
 from testutils import GraphDef, model_to_graph, get_outputs
 from testutils import SAMPLE_MODEL_FILE_NAME, SIMPLE_MODEL_PATH_NAME
-from testutils import PRELU_MODEL_PATH
+from testutils import PRELU_MODEL_PATH, MULTI_HEAD_PATH
 
 
 def deepmind_atari_net(num_classes: int = 10,
@@ -108,6 +109,22 @@ def prelu_classifier_model():
     return model
 
 
+def multi_head_model():
+    # MNIST handwriting detection model
+    inputs = Input(shape=(784,), name='image_data')
+    dense1 = Dense(512, activation='relu')(inputs)
+    dense2 = Dense(128, activation='relu')(dense1)
+    dense3 = Dense(32, activation='relu')(dense2)
+    # one-hot classifier output
+    classification_output = Dense(10, activation='softmax',
+                                  name='classification')(dense3)
+    # upscale autoencoder output from bottleneck layer
+    up_dense1 = Dense(128, activation='relu')(dense3)
+    up_dense2 = Dense(512, activation='relu')(up_dense1)
+    decoded_outputs = Dense(784, name='decoded_digit')(up_dense2)
+    return Model(inputs, [classification_output, decoded_outputs])
+
+
 def remove_weight_data(graph_def: GraphDef) -> None:
     """Remove dummy weight data from graph"""
     def _used_by(node_name, op_name):
@@ -147,6 +164,7 @@ def save_tfjs_model(model: Callable, path: str) -> None:
 
 def save_keras_model(model: Callable, path: str) -> None:
     """Save Keras model as TFJS graph model"""
+    Path(path).mkdir(parents=True, exist_ok=True)
     model.save(os.path.join(path, 'keras.h5'))
     convert_to_tfjs([
         '--input_format=keras',
@@ -165,3 +183,6 @@ if __name__ == '__main__':
     print('Generating prelu-activation model...')
     model = prelu_classifier_model()
     save_keras_model(model, PRELU_MODEL_PATH)
+    print('Generating multi-head model...')
+    model = multi_head_model()
+    save_tfjs_model(model, MULTI_HEAD_PATH)
