@@ -33,6 +33,9 @@ import tfjs_graph_converter.util as util
 GraphDef = tf.compat.v1.GraphDef
 Tensor = numpy.ndarray
 
+SIGNATURE_OUTPUTS = 'outputs'
+SIGNATURE_METHOD = 'method_name'
+
 
 def _parse_path_and_model_json(model_dir: str) -> Tuple[str, str]:
     """
@@ -293,7 +296,8 @@ def graph_model_to_frozen_graph(model_dir: str, export_path: str) -> str:
 
 def graph_model_to_saved_model(model_dir: str,
                                export_dir: str,
-                               tags: List[str]) -> str:
+                               tags: List[str],
+                               signature_def_map: dict = None) -> str:
     """
     Convert a TFJS graph model to a SavedModel
 
@@ -301,15 +305,29 @@ def graph_model_to_saved_model(model_dir: str,
         model_dir: Directory that contains the TFJS JSON model and weights
         export_dir: Target directory to save the TF model in
         tags: Tags for the SavedModel
+        signature_def_map: Dictionary that maps signature keys to model
+            signatures;
+            A model signature is a dictionary that maps a signature key
+            (the name of the signature) - which can be empty or `None` - to
+            a dictionary that contains two keys:
+            - `outputs`, which maps to a flat list of output tensor names
+            - `method_name`, which is an optional name describing the signature
+              (defaults to `tf.saved_model.PREDICT_METHOD_NAME`)
+
+            Example:
+            {'model_signature': {'outputs': ['Output1', 'Output2']},
+            {'debug_signature': {'outputs': ['Output1', 'Output2', 'Detail']}}}
+
+            The names given in the 'outputs' must refer to output tensors in
+            the model; otherwise a `ValueError` is raised.
 
     Returns:
         The path to which the model was written.
     """
     graph, signature_def = load_graph_model_and_signature(model_dir)
     builder = tf.compat.v1.saved_model.Builder(export_dir)
-    signature_map = {
-        tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
-    }
+    signature_map = _get_signature_map(graph, signature_def, signature_def_map)
+
     with tf.compat.v1.Session(graph=graph) as sess:
         builder.add_meta_graph_and_variables(sess, tags=tags,
                                              signature_def_map=signature_map)
@@ -317,7 +335,8 @@ def graph_model_to_saved_model(model_dir: str,
 
 
 def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
-                                export_dir: str) -> str:
+                                export_dir: str,
+                                signatures: dict = None) -> str:
     """
     Read multiple TFJS graph models and saves them in a single SavedModel
 
@@ -325,27 +344,114 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
         model_list: List of tuples containing TFJS model dir and tags, e.g.
             [("./models/model1", ["step1"]), ("./models/model2": ["step2"])]
         export_dir: Target directory to save the TF model in
+        signatures: Dictionary of model names (i.e. the first item in
+            `model_list` tuples) to per-model signatures.
+            A model signature is a dictionary that maps a signature key
+            (the name of the signature) - which can be empty or `None` - to
+            a dictionary that contains two keys:
+            - `outputs`, which maps to a flat list of output tensor names
+            - `method_name`, which is an optional name describing the signature
+              (defaults to `tf.saved_model.PREDICT_METHOD_NAME`)
+            Empty keys map to the default signature key.
+            Keys that don't map to a model in ``model_list`` are ignored.
+
+            {'./models/model2': {'': {'outputs': ['model_output1']},
+                                 'debug': {'outputs': ['model_output1',
+                                                       'details']}}
+
+            If ``signatures`` is not provided or doesn't contain a key matching
+            a model in ``model_list``, the default signature is used.
 
     Returns:
         The path to which the model was written.
     """
+    signatures = signatures or dict()
     builder = tf.compat.v1.saved_model.Builder(export_dir)
 
     model_dir, tags = model_list[0]
     graph, signature_def = load_graph_model_and_signature(model_dir)
-    signature_map = {
-        tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
-    }
+    signature = signatures[model_dir] if model_dir in signatures else None
+    signature_map = _get_signature_map(graph, signature_def, signature)
     with tf.compat.v1.Session(graph=graph) as sess:
         builder.add_meta_graph_and_variables(sess, tags=tags,
                                              signature_def_map=signature_map)
 
     for model_dir, tags in model_list[1:]:
         graph, signature_def = load_graph_model_and_signature(model_dir)
-        signature_map = {
-            tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
-        }
+        signature = signatures[model_dir] if model_dir in signatures else None
+        signature_map = _get_signature_map(graph, signature_def, signature)
         with tf.compat.v1.Session(graph=graph):
             builder.add_meta_graph(tags=tags, signature_def_map=signature_map)
 
     return builder.save()
+
+
+def _get_signature_map(graph: tf.Graph, default_signature_def: dict,
+                       signature_def_map: dict) -> dict:
+    """Select the signature def map from default & user provided signatures"""
+    default_key = tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY
+    if signature_def_map is None:
+        return {default_key: default_signature_def}
+    else:
+        return _build_signatures(graph, signature_def_map)
+
+
+def _build_signatures(graph: tf.Graph, signature_def_map: dict) -> dict:
+    """
+    Turn a signature map into a proper argument for ``add_meta_graph`` by
+    creating tensor info for each output name given in ``signature_def_map``.
+
+    Args:
+        graph: TF Graph instance
+        signature_def_map: Dictionary that maps signature keys to output names
+
+    Returns:
+        Signature definition map for passing to
+        ``SavedModelBuilder.add_meta_graph``
+    """
+    inputs = {info.name: util._build_tensor_info(graph, info)
+              for info in util.get_input_nodes(graph)}
+    default_key = tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY
+    output_tensors = set(name[0:-2] for name in util.get_output_tensors(graph))
+    for key, value in signature_def_map.items():
+        if SIGNATURE_OUTPUTS not in value:
+            raise ValueError(f'Signature "{key or default_key}" is invalid: '
+                             f'the key "{SIGNATURE_OUTPUTS}" is missing')
+        if len(value[SIGNATURE_OUTPUTS]) == 0:
+            raise ValueError(f'Signature key "{SIGNATURE_OUTPUTS}" must not'
+                             'be empty')
+        for name in value[SIGNATURE_OUTPUTS]:
+            if name not in output_tensors:
+                valid_outputs = str(output_tensors)[1:-1]
+                raise ValueError(f'Signature "{key or default_key}" is '
+                                 f'invalid: "{name}" is not an output tensor.'
+                                 f' Valid outputs are {valid_outputs}')
+    return {key or default_key: _build_signature(graph, inputs, info)
+            for key, info in signature_def_map.items()}
+
+
+def _build_signature(graph: tf.Graph, inputs: dict,
+                     info: dict) -> util.SignatureDef:
+    """
+    Return tensor info for inputs and outputs.
+
+    Args:
+        graph: TF Graph instance
+        inputs: dict that maps input names to tensor information
+        info: dict containing the key 'outputs' that maps to flat list of
+            output names and an optional key 'method_name'
+
+    Returns:
+        dict that maps inputs and outputs to tensor information
+        (name, type, and shape)
+    """
+    def _info(name):
+        return util.NodeInfo(name=name, shape=(), dtype=0, tensor=name+':0')
+
+    output_names = info[SIGNATURE_OUTPUTS]
+    outputs = {name: util._build_tensor_info(graph, _info(name))
+               for name in output_names}
+    name = tf.saved_model.PREDICT_METHOD_NAME
+    if SIGNATURE_METHOD in info:
+        name = info[SIGNATURE_METHOD] or name
+    return util.SignatureDef(inputs=inputs, outputs=outputs, method_name=name)

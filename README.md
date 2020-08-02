@@ -54,9 +54,30 @@ for quick and easy model conversion.
 | :--- | :--- |
 | `-h`, `--help` | Show help message and exit |
 | `--output_format` | Use `tf_frozen_model` (the default) to save a Tensorflow frozen model. `tf_saved_model` exports to a Tensorflow _SavedModel_ instead. |
- | `--saved_model_tags` | Specifies the tags of the MetaGraphDef to save, in comma separated string format. Defaults to "serve". Applicable only if `--output format` is `tf_saved_model` |
- | `-v`, `--version` | Shows the version of the converter and its dependencies. |
- | `-s`, `--silent` | Suppresses any output besides error messages. |
+| `--saved_model_tags` | Specifies the tags of the MetaGraphDef to save, in comma separated string format. Defaults to "serve". Applicable only if `--output_format` is `tf_saved_model` |
+| `-v`, `--version` | Shows the version of the converter and its dependencies. |
+| `-s`, `--silent` | Suppresses any output besides error messages. |
+
+### Advanced Options
+
+These options are intended for advanced users who are familiar with the details of TensorFlow and [TensorFlow Serving](https://www.tensorflow.org/tfx/guide/serving).
+
+| Option | Description |
+| :--- | :--- |
+| `--outputs` | Specifies the outputs of the MetaGraphDef to save, in comma separated string format. Applicable only if `--output_format` is `tf_saved_model` |
+| `--signature_key` | Specifies the key for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. |
+| `--method_name` | Specifies the method name for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. |
+
+Specifying ``--outputs`` can be useful for multi-head models to select the default
+output for the main signature. The CLI only handles the default signature of
+the model. Multiple signatures can be created using the [API](https://github.com/patlevin/tfjs-to-tf/blob/master/docs/api.rst).
+
+The method name must be handled with care, since setting the wrong value might
+prevent the signature from being valid for use with TensorFlow Serving.
+The option is available, because the converter only generates
+*predict*-signatures. In case the model is a regression model or a classifier
+with the matching outputs, the correct method name can be forced using the
+``--method_name`` option.
 
 Alternatively, you can create your own converter programs using the module's API.
 The API is required to accomplish more complicated tasks, like packaging multiple
