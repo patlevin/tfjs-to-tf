@@ -2,7 +2,7 @@
 # Copyright © 2020 Patrick Levin
 """Utility functions for rewriting TensorFow Graphs"""
 
-from typing import Callable, Dict, List, Optional, Text, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Text, Tuple, Union
 
 from tensorflow import as_dtype
 from tensorflow.core.framework.attr_value_pb2 import AttrValue
@@ -44,7 +44,8 @@ def get_op_def(op_name: Text) -> Optional[OpDef]:
     return op_def_registry.get(op_name)
 
 
-def make_op_node(op_name: Text, inputs: Inputs, name: Text = None) -> NodeDef:
+def make_op_node(op_name: Text, inputs: Inputs, name: Text = None,
+                 dtype: Any = None) -> NodeDef:
     """
     Create a TF graph node given the operation, input, and a name.
     The resulting node definition won't include any operation-specific
@@ -55,6 +56,7 @@ def make_op_node(op_name: Text, inputs: Inputs, name: Text = None) -> NodeDef:
         inputs: Input node, node name, or list of inputs nodes or node names
         name: Node name in the graph, must be unique and defaults to the
               operation name
+        dtype: Optional data type of the operation (default: float32)
 
     Returns:
         TF graph node definition for the given operation, inputs, and name
@@ -68,7 +70,13 @@ def make_op_node(op_name: Text, inputs: Inputs, name: Text = None) -> NodeDef:
         if hasattr(item, 'name'):
             input_list[i] = item.name
     # generate node defintion
-    dtype = dtypes.float32.as_datatype_enum
+    if dtype is None:
+        dtype = dtypes.float32.as_datatype_enum
+    elif hasattr(dtype, 'as_datatype_enum'):
+        dtype = dtype.as_datatype_enum
+    else:
+        dtype = dtypes.as_dtype(dtype).as_datatype_enum
+
     node_def = NodeDef(op=op_name, name=name or op_name,
                        attr={'T': AttrValue(type=dtype)})
     node_def.input.extend(input_list)

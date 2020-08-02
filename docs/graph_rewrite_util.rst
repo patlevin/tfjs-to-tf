@@ -75,12 +75,16 @@ operation is supported by TF or to query required attributes.
     make_op_node(
         op_name: str,
         inputs: Inputs,
-        name: str
+        name: str,
+        dtype: Any
     ) -> NodeDef
 
 Creates a TF graph node given the operation, inputs, and a name.
 Inputs can be given as lists of node name (``str``), graph nodes (``NodeDef``),
-or just a node name or node if only one input is required. 
+or just a node name or node if only one input is required.
+
+Name and dtype, are optional. ``dtype`` denotes the data type of the node and
+can be specified as a ``DType``-instance, an enum value (integer), or a string.
 
 ``make_const_node``
 ^^^^^^^^^^^^^^^^^^^

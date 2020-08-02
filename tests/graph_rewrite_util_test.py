@@ -57,6 +57,23 @@ class GraphRewriteUtilTest(unittest.TestCase):
         node_from_node = rewrite.make_op_node('Neg', node_from_str)
         self.assertEqual(node_from_node.input, ['node_a'])
 
+    def test_make_op_node_accepts_dtype(self):
+        """make_op_node should accept dtype parameter and default to float32"""
+        def dtype(node):
+            return rewrite.dtypes.as_dtype(node.attr['T'].type)
+        # from default
+        node = rewrite.make_op_node('Neg', 'x')
+        self.assertEqual(dtype(node), rewrite.dtypes.float32)
+        # from dtype
+        node = rewrite.make_op_node('Neg', 'x', dtype=rewrite.dtypes.float16)
+        self.assertEqual(dtype(node), rewrite.dtypes.float16)
+        # from enum
+        node = rewrite.make_op_node('Neg', 'x', dtype=6)
+        self.assertEqual(dtype(node), rewrite.dtypes.int8)
+        # from string
+        node = rewrite.make_op_node('Neg', 'x', dtype='half')
+        self.assertEqual(dtype(node), rewrite.dtypes.float16)
+
     def test_copy_op_attrs(self):
         """copy_op_attrs should only copy attrs supported by the target node"""
         # copy_op_attrs is used to transfer attrs from a fused op node
