@@ -527,11 +527,19 @@ custom signatures:
         }
     }
     # rename the outputs to always be 'output'
-    signature_key = RenameMap({
-        'Identity': 'output', 'Identity_1': 'output', 'x': 'input'
-    })
+    signature_keys = {
+        '~/models/predict/': RenameMap({
+            'Identity': 'output', 'Identity_1': 'output', 'x': 'input'
+        }),
+        '~/website/finalize/': RenameMap({
+            'x': 'input', 'x_1': 'temperature', 'squeeze/dense4/BiasAdd': 'output'
+        })
+    }
     # convert TFJS model to a SavedModel
-    tfjs.graph_models_to_saved_model(model_list, '~/models/combined/')
+    tfjs_conv.api.graph_models_to_saved_model(
+        model_list, '~/models/combined/',
+        signatures=signatures,
+        signature_keys=signature_keys)
 
 
 ``RenameMap``
