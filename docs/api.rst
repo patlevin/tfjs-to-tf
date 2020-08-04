@@ -19,6 +19,11 @@ Type          Description
               `graph_def_to_graph_v1`_.
 ------------- ----------------------------------------------------------
 **Tensor**    Alias for ``numpy.ndarray``.
+------------- ----------------------------------------------------------
+**RenameMap** Class for mapping model inputs and -outputs to new names.
+              Pass string dictionaries to the constructor and use its
+              ``apply()``-method to rename node in a model's ``GraphDef``
+              proto.
 ============= ==========================================================
 
 ``load_graph_model``
@@ -118,7 +123,7 @@ that contains the inputs and outputs of the model.
     **Returns:**
 
 ``tf.Graph`` that contains the frozen graph and all model weights and the
-model signature, if present in the meta data or inferred from the graph. 
+model signature, if present in the meta data or inferred from the graph.
 
 __ https://www.tensorflow.org/api_docs/python/tf/Graph
 __ https://www.tensorflow.org/versions/r1.15/api_docs/python/tf/saved_model/predict_signature_def
@@ -254,7 +259,7 @@ input tensors as arguments and returns a list of model outputs as tensors.
 
     # extract a scalar from a tensor were tensor[np.argmax(tensor.shape)] == 1
     def as_scalar(tensor):
-        array = tensor.numpy() 
+        array = tensor.numpy()
         flattened = np.reshape(array, (1))
         return flattened[0]
 
@@ -295,8 +300,8 @@ The resulting graph is written to a **binary** protobuf message.
 
 **export_path**
     Directory and file name to save the frozen graph to.
-        The file name usually ends in `.pb` and the directory
-        must exist.
+    The file name usually ends in `.pb` and the directory
+    must exist.
 
 ..
 
@@ -326,7 +331,7 @@ written.
    graph_model_to_saved_model(
         model_dir: str,
         export_dir: str,
-        tags: List[str]
+        tags: List[str] = None
    ) -> str
 
 Converts a tensorflowjs graph model to a tensorflow `SavedModel`__
@@ -357,7 +362,7 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
     capabilities or use-cases. More specifically, these tags
     typically annotate a meta graph with its functionality
     (e.g. serving or training), and possibly hardware specific
-    aspects such as GPU.
+    aspects such as GPU. Tags are optional and defaults apply if not provided.
 
 ..
 
@@ -373,7 +378,7 @@ were written.
 .. code:: python
 
    from tfjs_graph_converter import api as tfjs
-   
+
    tfjs.graph_model_to_saved_model(
         '~/some-website/saved_model_stylelize_js/',
         '~/models/stylize/',
@@ -389,7 +394,7 @@ were written.
         export_dir: str
     ) -> str
 
-This function merges several tensorflowjs graph models into a single 
+This function merges several tensorflowjs graph models into a single
 `SavedModel`. Separate models are identified by different tags (see `documentation`__).
 
 __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_model/README.md
@@ -401,8 +406,9 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
 **model_list**
     List of tuples containing the tensorflowjs graph model
     directory and a list of tags for the imported model.
-    The content takes the form 
-    `[('/path/to/1st/model_json/', ['serve', 'preprocess']), ('/path/to/2nd/model_json/', ['serve', 'predict'])]`
+    The content takes the form
+    `[('/path/to/1st/model_json/', ['serve', 'preprocess']),`
+    `('/path/to/2nd/model_json/', ['serve', 'predict'])]`
 
 **export_dir**
     Directory name to save the meta data and weights to.
@@ -430,3 +436,87 @@ were written.
     ]
     # convert TFJS model to a SavedModel
     tfjs.graph_models_to_saved_model(model_list, '~/models/combined/')
+
+
+``RenameMap``
+^^^^^^^^^^^^^^^
+
+.. code:: python
+
+    RenameMap(
+        mapping: Any,
+    )
+
+A ``RenameMap`` object is used for renaming inputs and outputs of a model
+signature.
+
+..
+
+    **Arguments:**
+
+**mapping**
+    A ``dict`` that maps model input names (string keys) to new names
+    (also strings) or any iterable that can be converted to a
+    ``Dict[str, str]``.
+
+All keys and values must be non-empty strings (whitespace-only is not allowed)
+and all values (i.e. new names) must be unique.
+
+..
+
+    **Example:**
+
+Let's pretend we have a multi-head model with two outputs: a one-hot classifier
+result and an autoencoder output tensor. The default model signature contains
+two outputs, `Identity` (the classifier result) and `Identity_1` (the
+autoencoder output).
+
+We want to set two signatures: one for the classifier result and one for the
+autoencoder result. Both shall return their results in `output`.
+
+.. code:: python
+
+    import tfjs_graph_converter as tfjs_conv
+    from tfjs_graph_converter.api import RenameMap
+
+    # first we define out two signatures using the actual output names
+    signature_map = {
+        'serve/classify': {tfjs_conv.api.SIGNATURE_OUTPUTS: ['Identity']}
+        'serve/autoencode': {tfjs_conv.api.SIGNATURE_OUTPUTS: ['Identity_1']}
+    }
+    # next we can define a RenameMap to change the keys of our outputs
+    signature_key = RenameMap({'Identity': 'output', 'Identity_1': 'output'})
+
+    # now we can convert our model to contain two signatures, both with a
+    # single output called 'output':
+    tfjs_conv.api.graph_model_to_saved_model(
+        '~/models/multi-head/', '~/models/saved_model', tags=['serve'],
+        signature_def_map=signature_map, signature_key_map=signature_key)
+
+
+``RenameMap.apply``
+^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+    RenameMap.apply(
+        signature: SignatureDef
+    ) -> SignatureDef
+
+This method applies the renaming to a given ``SignatureDef`` proto and returns
+the updated signature.
+
+..
+
+    **Arguments:**
+
+**signature**
+    A ``SignatureDef`` proto containing the model with inputs or outputs to be
+    renamed.
+
+..
+
+    **Returns:**
+
+The updated ``SignatureDef`` proto containing the signature with inputs and
+outputs renamed according to the map's contents.

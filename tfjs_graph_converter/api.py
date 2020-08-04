@@ -37,6 +37,62 @@ SIGNATURE_OUTPUTS = 'outputs'
 SIGNATURE_METHOD = 'method_name'
 
 
+# this class exists as a way to ensure valid mappings without having check
+# inside consumers of the type
+class RenameMap:
+    """Mapping from input and output nodes to new names"""
+    def __init__(self, mapping):
+        """Set input and output remapping
+
+            Args:
+                mapping: mapping from old to new names - any type that
+                         can be converted to a Dict[str, str].
+                         New names must be unique.
+        """
+        def _is_valid_str(s): return isinstance(s, str) and len(s.strip()) > 0
+        def _is_valid(k, v): return _is_valid_str(k) and _is_valid_str(v)
+        if not isinstance(mapping, dict):
+            try:
+                mapping = dict(mapping)
+            except TypeError as t:
+                raise ValueError(f'{t}')
+        if any((k, v) for k, v in mapping.items() if not _is_valid(k, v)):
+            raise ValueError('mapping must be between non-empty strings')
+        self.mapping = mapping
+
+    def apply(self, signature: util.SignatureDef) -> util.SignatureDef:
+        """Apply the rename mapping to a SignatureDef"""
+        if not isinstance(signature, util.SignatureDef):
+            raise ValueError('signature must be a SignatureDef proto')
+
+        # replace the contents of a mapfield with another mapfield
+        def _replace_contents(target, replacement):
+            keys = [key for key in target]
+            # clear the target
+            for key in keys:
+                del target[key]
+            # copy the contents
+            for key in replacement:
+                target[key].CopyFrom(replacement[key])
+
+        updated = signature
+        if any(self.mapping):
+            # operate on a local copy such that the order of replacements
+            # doesn't matter (i.e. allow for A=B & B=A name swapping)
+            inputs, outputs = signature.inputs, signature.outputs
+            temp = util.SignatureDef(inputs=inputs, outputs=outputs)
+            for old_name, new_name in self.mapping.items():
+                if old_name in inputs:
+                    temp.inputs[new_name].CopyFrom(inputs[old_name])
+                    del temp.inputs[old_name]
+                elif old_name in outputs:
+                    temp.outputs[new_name].CopyFrom(outputs[old_name])
+                    del temp.outputs[old_name]
+            _replace_contents(inputs, temp.inputs)
+            _replace_contents(outputs, temp.outputs)
+        return updated
+
+
 def _parse_path_and_model_json(model_dir: str) -> Tuple[str, str]:
     """
     Parse model directory name and return path and file name
@@ -116,7 +172,7 @@ def _extract_signature_def(model_json: Dict[str, Any]
 
 def _create_graph(graph_def: GraphDef,
                   weight_dict: Dict[str, Tensor],
-                  modifiers: Dict[str, Callable]) -> GraphDef:
+                  modifiers: Dict[str, Callable]) -> tf.Graph:
     """
     Create a TF Graph from nodes
 
@@ -296,15 +352,16 @@ def graph_model_to_frozen_graph(model_dir: str, export_path: str) -> str:
 
 def graph_model_to_saved_model(model_dir: str,
                                export_dir: str,
-                               tags: List[str],
-                               signature_def_map: dict = None) -> str:
+                               tags: List[str] = None,
+                               signature_def_map: dict = None,
+                               signature_key_map: RenameMap = None) -> str:
     """
     Convert a TFJS graph model to a SavedModel
 
     Args:
         model_dir: Directory that contains the TFJS JSON model and weights
         export_dir: Target directory to save the TF model in
-        tags: Tags for the SavedModel
+        tags: Tags for the SavedModel, optional
         signature_def_map: Dictionary that maps signature keys to model
             signatures;
             A model signature is a dictionary that maps a signature key
@@ -320,6 +377,10 @@ def graph_model_to_saved_model(model_dir: str,
 
             The names given in the 'outputs' must refer to output tensors in
             the model; otherwise a `ValueError` is raised.
+        signature_key_map: Mapping from input- or output tensors to signature
+                           keys. The default signature uses tensor names for
+                           signature keys. This argument allows to map tensor
+                           names to different keys.
 
     Returns:
         The path to which the model was written.
@@ -327,6 +388,10 @@ def graph_model_to_saved_model(model_dir: str,
     graph, signature_def = load_graph_model_and_signature(model_dir)
     builder = tf.compat.v1.saved_model.Builder(export_dir)
     signature_map = _get_signature_map(graph, signature_def, signature_def_map)
+    tags = _get_tags(tags)
+    if signature_key_map is not None:
+        for signature in signature_map.values():
+            signature_key_map.apply(signature)
 
     with tf.compat.v1.Session(graph=graph) as sess:
         builder.add_meta_graph_and_variables(sess, tags=tags,
@@ -336,7 +401,9 @@ def graph_model_to_saved_model(model_dir: str,
 
 def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
                                 export_dir: str,
-                                signatures: dict = None) -> str:
+                                signatures: dict = None,
+                                signature_keys: Dict[str, RenameMap] = None
+                                ) -> str:
     """
     Read multiple TFJS graph models and saves them in a single SavedModel
 
@@ -361,17 +428,30 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
 
             If ``signatures`` is not provided or doesn't contain a key matching
             a model in ``model_list``, the default signature is used.
+        signature_keys: Dictionary of model names (i.e. the first item in
+            `model_list` tuples) to per-model signature key mappings. This
+            allows a remapping of signature inputs and outputs to different
+            keys (the tensor names stay unaffected).
 
     Returns:
         The path to which the model was written.
     """
-    signatures = signatures or dict()
+    signatures = signatures or {}
+    signature_keys = signature_keys or {}
     builder = tf.compat.v1.saved_model.Builder(export_dir)
 
-    model_dir, tags = model_list[0]
+    def _apply_key_map(model, signature_map):
+        if model in signature_keys and signature_keys[model] is not None:
+            signature_key_map = signature_keys[model]
+            for signature in signature_map.values():
+                signature_key_map.apply(signature)
+
+    model_dir, tags = _get_tags(model_list[0])
     graph, signature_def = load_graph_model_and_signature(model_dir)
     signature = signatures[model_dir] if model_dir in signatures else None
     signature_map = _get_signature_map(graph, signature_def, signature)
+    _apply_key_map(model_dir, signature_map)
+
     with tf.compat.v1.Session(graph=graph) as sess:
         builder.add_meta_graph_and_variables(sess, tags=tags,
                                              signature_def_map=signature_map)
@@ -380,6 +460,8 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
         graph, signature_def = load_graph_model_and_signature(model_dir)
         signature = signatures[model_dir] if model_dir in signatures else None
         signature_map = _get_signature_map(graph, signature_def, signature)
+        _apply_key_map(model_dir, signature_map)
+        tags = _get_tags(tags)
         with tf.compat.v1.Session(graph=graph):
             builder.add_meta_graph(tags=tags, signature_def_map=signature_map)
 
@@ -455,3 +537,13 @@ def _build_signature(graph: tf.Graph, inputs: dict,
     if SIGNATURE_METHOD in info:
         name = info[SIGNATURE_METHOD] or name
     return util.SignatureDef(inputs=inputs, outputs=outputs, method_name=name)
+
+
+def _get_tags(tags):
+    """Reformat tags to a proper list of trimmed strings"""
+    if tags is None:
+        tags = tf.saved_model.SERVING
+    if isinstance(tags, str):
+        tags = [tags]
+    # remove all empty and whitespace-only tags and return trimmed strings
+    return [tag.strip() for tag in tags if bool(tag) and len(tag.strip()) > 0]

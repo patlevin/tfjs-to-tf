@@ -62,11 +62,12 @@ for quick and easy model conversion.
 
 These options are intended for advanced users who are familiar with the details of TensorFlow and [TensorFlow Serving](https://www.tensorflow.org/tfx/guide/serving).
 
-| Option | Description |
-| :--- | :--- |
-| `--outputs` | Specifies the outputs of the MetaGraphDef to save, in comma separated string format. Applicable only if `--output_format` is `tf_saved_model` |
-| `--signature_key` | Specifies the key for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. |
-| `--method_name` | Specifies the method name for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. |
+| Option | Description | Example |
+| :--- | :--- | :--- |
+| `--outputs` | Specifies the outputs of the MetaGraphDef to save, in comma separated string format. Applicable only if `--output_format` is `tf_saved_model` | --outputs=Identity |
+| `--signature_key` | Specifies the key for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. | --signature_key=serving_autoencode |
+| `--method_name` | Specifies the method name for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. | --method_name=tensorflow/serving/classify |
+| `--rename` | Specifies a key mapping to change the keys of outputs and inputs in the signature. The format is comma-separated pairs of *old name:new name*. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. | --rename Identity:scores,model/dense256/BiasAdd:confidence |
 
 Specifying ``--outputs`` can be useful for multi-head models to select the default
 output for the main signature. The CLI only handles the default signature of
@@ -91,6 +92,54 @@ followed by the path and file name of the frozen model like so:
 
 ```sh
 tfjs_graph_converter path/to/js/model path/to/frozen/model.pb
+```
+
+## Advanced Example
+
+Converting to [TF SavedMovel format](https://www.tensorflow.org/guide/saved_model)
+adds a lot of options for tweaking model signatures. The following example
+converts a [Posenet](https://github.com/tensorflow/tfjs-models/tree/master/posenet)
+model, which is a multi-head model.
+
+We want to select only two of the four possible outputs and rename them in the
+model's signature, as follows:
+
+* Input: *input* (from *sub_2*)
+* Outputs: *offsets* and *heatmaps* (from *float_short_offsets* and *float_heatmaps*)
+
+```sh
+tfjs_graph_converter \
+    ~/models/posenet/model-stride16.json \
+    ~/models/posenet_savedmodel \
+    --output_format tf_saved_model \
+    --outputs float_short_offsets,float_heatmaps \
+    --rename float_short_offsets:offsets,float_heatmaps:heatmaps,sub_2:input
+```
+
+After the conversion, we can examine the output and verify the new model
+signature:
+
+```sh
+saved_model_cli show --dir ~/models/posenet_savedmodel --all
+
+MetaGraphDef with tag-set: 'serve' contains the following SignatureDefs:
+
+signature_def['serving_default']:
+  The given SavedModel SignatureDef contains the following input(s):
+    inputs['input'] tensor_info:
+        dtype: DT_FLOAT
+        shape: (1, -1, -1, 3)
+        name: sub_2:0
+  The given SavedModel SignatureDef contains the following output(s):
+    outputs['heatmaps'] tensor_info:
+        dtype: DT_FLOAT
+        shape: (1, -1, -1, 17)
+        name: float_heatmaps:0
+    outputs['offsets'] tensor_info:
+        dtype: DT_FLOAT
+        shape: (1, -1, -1, 34)
+        name: float_short_offsets:0
+  Method name is: tensorflow/serving/predict
 ```
 
 ## Usage from within Python

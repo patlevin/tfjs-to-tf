@@ -8,6 +8,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import re
 import sys
 import time
 
@@ -22,6 +23,17 @@ import tfjs_graph_converter.version as version
 class SplitCommaSeparatedValues(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         setattr(namespace, self.dest, values.split(','))
+
+
+class SplitCommaSeparatedTuples(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        ok = re.search('^[^:,]+:[^:,]+(,[^:,]+:[^:,]+)*$', values)
+        if not ok:
+            raise argparse.ArgumentError(self,
+                                         'Argument must be comma-separated '
+                                         'pairs of name:key')
+        pairs = values.split(',')
+        setattr(namespace, self.dest, [tuple(p.split(':')) for p in pairs])
 
 
 def get_arg_parser():
@@ -50,37 +62,45 @@ def get_arg_parser():
         choices=set([common.CLI_SAVED_MODEL, common.CLI_FROZEN_MODEL]),
         help=f'Output format. Default: "{common.CLI_FROZEN_MODEL}".'
     )
-    default_tag = tf.saved_model.SERVING
-    parser.add_argument(
+    group = parser.add_argument_group(f'{common.CLI_SAVED_MODEL} specific',
+                                      'Arguments that apply to SavedModel '
+                                      'export only.')
+    group.add_argument(
         '--' + common.CLI_SAVED_MODEL_TAGS,
         action=SplitCommaSeparatedValues,
         type=str,
-        default=default_tag,
         help='Tags of the MetaGraphDef to save, in comma separated string '
-             f'format. Defaults to "{default_tag}". Applicable only if output'
-             f' format is "{common.CLI_SAVED_MODEL}"'
+             f'format. Defaults to "{tf.saved_model.SERVING}".',
+        metavar='TAG[,TAG1[,...]]'
     )
-    parser.add_argument(
+    group.add_argument(
         '--' + common.CLI_OUTPUTS,
         action=SplitCommaSeparatedValues,
         type=str,
-        help='Outputs of the model to add to the signature in comma separated '
-             'string format. Applicable only if output format is "'
-             f'{common.CLI_SAVED_MODEL}"'
+        help='Outputs of the model to add to the signature separated by comma',
+        metavar='OUTPUT[,OUTPUT1[,...]]'
     )
-    parser.add_argument(
+    group.add_argument(
         '--' + common.CLI_SIGNATURE_KEY,
         type=str,
         help='Specifies the signature key to be used in the MetaGraphDef. '
-             f'Applicable only if output format is "{common.CLI_SAVED_MODEL}".'
              f' REQUIRES "--{common.CLI_OUTPUTS}" to be set if specified. '
     )
-    parser.add_argument(
+    group.add_argument(
         '--' + common.CLI_METHOD_NAME,
         type=str,
         help='Specifies the signature method name used in the MetaGraphDef. '
-             f'Applicable only if output format is "{common.CLI_SAVED_MODEL}".'
              f' REQUIRES "--{common.CLI_OUTPUTS}" to be set if specified. '
+    )
+    group.add_argument(
+        '--' + common.CLI_RENAME,
+        action=SplitCommaSeparatedTuples,
+        type=str,
+        help='Specifies keys for inputs and outputs in the model signature. '
+             'Mappings are specified using name:key with multiple values '
+             'separated by comma.'
+             f' REQUIRES "--{common.CLI_OUTPUTS}" to be set if specified. ',
+        metavar='NAME:KEY[,NAME1:KEY1[,...]]'
     )
     parser.add_argument(
         '--' + common.CLI_VERSION,
@@ -104,6 +124,13 @@ def _get_signature(namespace: argparse.Namespace) -> dict:
         api.SIGNATURE_OUTPUTS: namespace.outputs,
         api.SIGNATURE_METHOD: namespace.method_name
     }} if namespace.outputs is not None else None
+
+
+def _get_signature_keys(namespace: argparse.Namespace) -> api.RenameMap:
+    if namespace.rename is not None:
+        return api.RenameMap(namespace.rename)
+    else:
+        return None
 
 
 def convert(arguments):
@@ -138,6 +165,9 @@ def convert(arguments):
         if args.method_name is not None and args.outputs is None:
             raise ValueError(f'--{common.CLI_METHOD_NAME} requires '
                              f'--{common.CLI_OUTPUTS} to be specified')
+        if args.rename is not None and args.outputs is None:
+            raise ValueError(f'--{common.CLI_RENAME} requires '
+                             f'--{common.CLI_OUTPUTS} to be specified')
 
     info("TensorFlow.js Graph Model Converter\n")
     info(f"Graph model:    {args.input_path}")
@@ -152,7 +182,9 @@ def convert(arguments):
     elif args.output_format == common.CLI_SAVED_MODEL:
         api.graph_model_to_saved_model(
             args.input_path, args.output_path,
-            args.saved_model_tags, _get_signature(args))
+            tags=args.saved_model_tags,
+            signature_def_map=_get_signature(args),
+            signature_key_map=_get_signature_keys(args))
     else:
         raise ValueError(f"Unsupported output format: {args.output_format}")
 
