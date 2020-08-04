@@ -78,4 +78,3 @@ into the range [-1, 1].
 * **Files:**
     • ``prelu/keras.h5``
     • ``prelu/model.json``
-

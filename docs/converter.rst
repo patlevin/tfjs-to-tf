@@ -46,7 +46,6 @@ aren't very useful when called from within another script, though
                                     Convert the TFJS model to a TF1
                                     ``SavedModel``. The output path must be a
                                     directory if this option is selected
-                                
     -------------------------- ----------------------------------------------
     --saved_model_tags         Defines the tags attached to the
                                ``SavedModel`` if the selected output format
@@ -55,7 +54,7 @@ aren't very useful when called from within another script, though
                                comma-separated list.
     -------------------------- ----------------------------------------------
     --version, -v              Prints the library version and the versions of
-                               dependencies (TF, TFJS). *Useful only in CLI* 
+                               dependencies (TF, TFJS). *Useful only in CLI*
     -------------------------- ----------------------------------------------
     --silent, -s               Suppress any text output besides errors and
                                warnings. *Useful only in CLI*

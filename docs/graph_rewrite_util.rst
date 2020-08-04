@@ -16,44 +16,45 @@ TF functionality.
 Types
 ^^^^^
 
-==================== ================================================================
+==================== ==========================================================
 Type                 Description
-==================== ================================================================
+==================== ==========================================================
 **NodeList**         Alias for ``List[NodeDef]`` - a list of graph nodes
--------------------- ----------------------------------------------------------------
+-------------------- ----------------------------------------------------------
 **NameOrNode**       Alias for ``Union[str, NodeDef]`` - graph node or its name
--------------------- ----------------------------------------------------------------
-**NameToNode**       Alias for ``Dict[str, NodeDef]`` - map from node name 
+-------------------- ----------------------------------------------------------
+**NameToNode**       Alias for ``Dict[str, NodeDef]`` - map from node name
                      to node
--------------------- ----------------------------------------------------------------
-**InputList**        Alias for ``List[NameOrNode]`` - a list of graph nodes or node
-                     names
--------------------- ----------------------------------------------------------------
+-------------------- ----------------------------------------------------------
+**InputList**        Alias for ``List[NameOrNode]`` - a list of graph nodes or
+                     node names
+-------------------- ----------------------------------------------------------
 **Inputs**           Alias for ``Union[NameOrNode, InputList]`` - a type that
                      is used for function parameters that are lists of nodes.
                      These nodes can be represented by actual graph nodes, node
-                     names or just a single value (graph node or node name). 
--------------------- ----------------------------------------------------------------
+                     names or just a single value (graph node or node name).
+-------------------- ----------------------------------------------------------
 **WeightTransform**  Alias for ``Callable[[Tensor], Tensor]`` - a function that
                      transforms models weights. The function takes a ``numpy``
                      -array and returns a modified ``numpy``-array (or ``None``
                      to signal that a weight can be removed)
--------------------- ----------------------------------------------------------------
+-------------------- ----------------------------------------------------------
 **WeightModifiers**  Alias for ``Dict[str, WeightTransform]`` - maps weight
-                     names to transform functions. Functions that receive a 
+                     names to transform functions. Functions that receive a
                      parameter of thsi type can add items to store processing
                      steps.
--------------------- ----------------------------------------------------------------
+-------------------- ----------------------------------------------------------
 **NodeTransform**    Alias for
-                     ``Callable[[NodeDef, NameToNode, WeightModifiers]], NodeList]``
+                     ``Callable[[NodeDef, NameToNode, WeightModifiers]],``
+                     `` NodeList]``
                      - signature of a function for transforming nodes.
-                     The function receives a graph node, a map of all nodes in the
-                     graph, and a map for storing model weight modifiers.
-                     The function returns a list of graph nodes to replace the given
-                     node with. 
--------------------- ----------------------------------------------------------------
+                     The function receives a graph node, a map of all nodes in
+                     the graph, and a map for storing model weight modifiers.
+                     The function returns a list of graph nodes to replace the
+                     given node with.
+-------------------- ----------------------------------------------------------
 **Tensor**           Alias for ``numpy.ndarray``
-==================== ================================================================
+==================== ==========================================================
 
 ``get_op_def``
 ^^^^^^^^^^^^^^^
@@ -192,7 +193,7 @@ to it so that the returned name is unique with respect to ``input_node_map``.
 
 Returns whether a node is a fused operation with a given activation.
 Allows for easy checking whether a graph contains a node with a fused
-unsupported activation function that can be rewritten. 
+unsupported activation function that can be rewritten.
 
 ``validate_supported_ops``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

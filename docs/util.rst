@@ -29,7 +29,7 @@ Type          Description
                 TF DType enum that specifies the type of the node's
                 tensor elements
               ``tensor``
-                The name of the tensor associated with the node 
+                The name of the tensor associated with the node
 ============= ===========================================================
 
 ``get_input_nodes``
@@ -77,7 +77,7 @@ List of NodeInfo_ tuples for each model input.
     print'f'Model outputs: {model_outputs}')
 
 ``get_output_nodes``
-^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -101,7 +101,7 @@ about all output nodes.
 
 List of NodeInfo_ tuples for each model output. Note that the ``shape``
 value will be empty so you cannot use this function to infer the output shapes
-of a frozen graph model. 
+of a frozen graph model.
 
 ..
 
@@ -236,5 +236,113 @@ returned, if no output tensor shape could be determined.
     # load tfjs graph model and get the signature
     graph = tfjs.load_graph_model(MODEL_PATH)
     signature_def = tfjs_util.infer_signature(graph)
-    # change the signature name, e.g. for use with saved_model 
+    # change the signature name, e.g. for use with saved_model
     signature_def.method_name = 'my_model/predict'
+
+
+``rename_input_nodes``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+    rename_input_nodes(
+        graph_def: GraphDef,
+        name_mapping: Dict[str, str]
+    ) -> GraphDef
+
+Renames one or more input nodes in a ``GraphDef`` proto. Renaming is an
+in-place operation that returns the updated ``GraphDef`` proto.
+
+..
+
+    **Arguments:**
+
+**graph_def**
+    ``GraphDef`` proto containing the model.
+
+**name_mapping**
+    ``dict`` that maps existing input node names to new names.
+    Input names must map to any of `get_input_nodes`_, while new names must
+    be unique and cannot be present elsewhere in the model.
+
+..
+
+    **Returns:**
+
+Updated ``GraphDef`` (same as the provided argument).
+
+..
+
+    **Example:**
+
+.. code:: python
+
+    import tfjs_graph_converter as tfjs_conv
+
+    MODEL_PATH = '~/models/tfjs_model/'
+
+    graph = tfjs_conv.api.load_graph_model(MODEL_PATH)
+    inputs = tfjs_conv.util.get_input_nodes(graph)
+    graph_def = graph.as_graph_def()
+    # rename the first two inputs
+    tfjs_conv.util.rename_input_nodes(graph_def, {
+        inputs[0]: 'input_image',
+        inputs[1]: 'style_vector'
+    })
+    # create Graph from updated proto
+    graph = tfjs_conv.api.graph_def_to_graph_v1(graph_def)
+    # ...
+
+
+``rename_output_nodes``
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+    rename_output_nodes(
+        graph_def: GraphDef,
+        name_mapping: Dict[str, str]
+    ) -> GraphDef
+
+Renames one or more output nodes in a ``GraphDef`` proto. Renaming is an
+in-place operation that returns the updated ``GraphDef`` proto.
+
+..
+
+    **Arguments:**
+
+**graph_def**
+    ``GraphDef`` proto containing the model.
+
+**name_mapping**
+    ``dict`` that maps existing output node names to new names.
+    Output names must map to any of `get_output_nodes`_, while new names must
+    be unique and cannot be present elsewhere in the model.
+
+..
+
+    **Returns:**
+
+Updated ``GraphDef`` (same as the provided argument).
+
+..
+
+    **Example:**
+
+.. code:: python
+
+    import tfjs_graph_converter as tfjs_conv
+
+    MODEL_PATH = '~/models/tfjs_model/'
+
+    graph = tfjs_conv.api.load_graph_model(MODEL_PATH)
+    outputs = tfjs_conv.util.get_output_nodes(graph)
+    graph_def = graph.as_graph_def()
+    # rename some outputs
+    tfjs_conv.util.rename_input_nodes(graph_def, {
+        outputs[1]: 'estimated_depth',
+        outputs[2]: 'estimated_count'
+    })
+    # create Graph from updated proto
+    graph = tfjs_conv.api.graph_def_to_graph_v1(graph_def)
+    # ...
