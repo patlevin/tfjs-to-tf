@@ -331,7 +331,9 @@ written.
    graph_model_to_saved_model(
         model_dir: str,
         export_dir: str,
-        tags: List[str] = None
+        tags: Union[str, List[str]] = None,
+        signature_def_map: dict = None,
+        signature_key_map: RenameMap = None
    ) -> str
 
 Converts a tensorflowjs graph model to a tensorflow `SavedModel`__
@@ -363,6 +365,20 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
     typically annotate a meta graph with its functionality
     (e.g. serving or training), and possibly hardware specific
     aspects such as GPU. Tags are optional and defaults apply if not provided.
+    A single tag can be speficied as well.
+
+**signature_def_map**
+    Dict mapping signature keys (strings) to dict with the following supported
+    (string-) keys:
+
+    - ``"outputs"``: one or more outputs for this signature **required**
+    - ``"method_name"``: method name if different from default *optional*
+
+    Empty or `None` signature keys are replaced by the default signature key.
+
+**signature_key_map**
+    Optional mapping of tensor names to custom input or output names, see
+    `RenameMap`_.
 
 ..
 
@@ -375,14 +391,44 @@ were written.
 
     **Example:**
 
+Export to a SavedModel using the default signature and -tags:
+
 .. code:: python
 
-   from tfjs_graph_converter import api as tfjs
+   import tfjs_graph_converter as tfjs_conv
 
-   tfjs.graph_model_to_saved_model(
+   tfjs_conv.api.graph_model_to_saved_model(
+        '~/some-website/saved_model_stylelize_js/',
+        '~/models/stylize/')
+
+Export to a SavedModel using custom signatures (this example assumes a
+multi-head model):
+
+.. code:: python
+
+    import tfjs_graph_converter as tfjs_conv
+    from tfjs_graph_converter.api import RenameMap, SIGNATURE_OUTPUTS
+
+    # here the model has two outputs - Identity and Identity_1, e.g. classify
+    # scores and autoencoder output
+    signature_map = {
+        # add the default signature
+        '': {SIGNATURE_OUTPUTS: 'Identity'},
+        # add a generator signature
+        'autoencode': {SIGNATURE_OUTPUTS: 'Identity_1'}
+    }
+
+    # rename the outputs to always be 'output'
+    signature_key = RenameMap({
+        'Identity': 'output', 'Identity_1': 'output', 'x': 'input'
+    })
+
+    tfjs_conv.api.graph_model_to_saved_model(
         '~/some-website/saved_model_stylelize_js/',
         '~/models/stylize/',
-        tags=['serve_default'})
+        signature_def_map=signature_map,
+        signature_key_map=signature_key)
+
 
 ``graph_models_to_saved_model``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -391,7 +437,9 @@ were written.
 
    graph_models_to_saved_model(
         model_list: List[Tuple[str, List[str]]],
-        export_dir: str
+        export_dir: str,
+        signatures: dict = None,
+        signature_keys: Dict[str, RenameMap] = None
     ) -> str
 
 This function merges several tensorflowjs graph models into a single
@@ -414,6 +462,22 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
     Directory name to save the meta data and weights to.
     The directory must exist and should be empty.
 
+**signatures**
+    Optional dict that maps model names (e.g. the first item in ``model_list``
+    tuples) to signature dicts.
+    The signature dict for each model maps signature keys to a list of outputs
+    and an optional method name:
+
+    - ``"outputs"``: one or more outputs for this signature **required**
+    - ``"method_name"``: method name if different from default *optional*
+
+    Empty or `None` keys are replaced with the default signature key.
+
+**signature_key**
+    Optional dict that maps model names (e.g. the first item of the tuples in
+    ``model_list``) to `RenameMap`_ instances for assigning new names to model
+    inputs and outputs.
+
 ..
 
     **Returns:**
@@ -425,6 +489,8 @@ were written.
 
     **Example:**
 
+The following example saves multiple models into a single SavedModel:
+
 .. code:: python
 
     import tfjs_graph_converter.api as tfjs
@@ -434,6 +500,36 @@ were written.
         ('~/website/predict_saved_model_js/', ['serve', 'predict']),
         ('~/website/finalize_saved_model_js/', ['serve', 'finalize'])
     ]
+    # convert TFJS model to a SavedModel
+    tfjs.graph_models_to_saved_model(model_list, '~/models/combined/')
+
+The following example saves multiple models into a single SavedModel using
+custom signatures:
+
+.. code:: python
+
+    import tfjs_graph_converter as tfjs_conv
+    from tfjs_graph_converter.api import RenameMap, SIGNATURE_OUTPUTS
+
+    model_list = [
+        ('~/models/preprocess/', ['serve', 'preprocess']),
+        ('~/models/predict/', ['serve', 'predict']),
+        ('~/website/finalize/', ['serve', 'finalize'])
+    ]
+    # custom signatures for the first two models
+    signatures = {
+        '~/models/preprocess/': {
+            '': {SIGNATURE_OUTPUTS: 'Identity'}
+        },
+        '~/models/predict/': {
+            '': {SIGNATURE_OUTPUTS: 'Identity'}
+            'generator': {SIGNATURE_OUTPUTS: 'Identity_1'}
+        }
+    }
+    # rename the outputs to always be 'output'
+    signature_key = RenameMap({
+        'Identity': 'output', 'Identity_1': 'output', 'x': 'input'
+    })
     # convert TFJS model to a SavedModel
     tfjs.graph_models_to_saved_model(model_list, '~/models/combined/')
 
@@ -460,7 +556,8 @@ signature.
     ``Dict[str, str]``.
 
 All keys and values must be non-empty strings (whitespace-only is not allowed)
-and all values (i.e. new names) must be unique.
+and all values (i.e. new names) don't have to be unique if the map is applied
+to multiple signatures and doesn't cause name collisions.
 
 ..
 
