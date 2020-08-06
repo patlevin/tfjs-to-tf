@@ -71,10 +71,25 @@ Tensor index Content           Name
 The coordinates of every point contained within the sphere must also fall
 into the range [-1, 1].
 
-* **Formats:** Keras ```[HDF5]``, TFJS Graph Model
+* **Formats:** Keras ``[HDF5]``, TFJS Graph Model
 * **Weights:** ``[all]``
 * **Inputs:** ``(7)`` (*cx, cy, cz, r, px, py, pz*)
 * **Outputs:** ``(1,1)`` (*0 → outside; 1 → inside*)
 * **Files:**
     • ``prelu/keras.h5``
     • ``prelu/model.json``
+
+Multi-Head
+----------
+
+Multi-layer model for detecting handwritten digits (e.g. MNIST dataset).
+The model has two outputs ("heads") - one for the one-hot classifier results,
+and another output for the upscaled autoencoder output.
+
+* **Formats:** Frozen Graph ``[proto]``, TFJS Graph Model
+* **Weights:** ``[stripped]``
+* **Inputs:** (784) (*normalised 28x28 pixel grayscale image*)
+* **Output:** (10); (784) (*one-hot classifier result*; *autoencoder output*)
+* **Files:**
+    • ``multi_head/frozen_graph.pb``
+    • ``multi_head/model.json``
