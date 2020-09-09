@@ -25,6 +25,7 @@ from google.protobuf.json_format import ParseDict
 
 import tfjs_graph_converter.common as common
 from tfjs_graph_converter.convert_prelu import replace_prelu, split_fused_prelu
+from tfjs_graph_converter.convert_fused_depthwise import split_fused_depthwise
 from tfjs_graph_converter.graph_rewrite_util import validate_supported_ops
 from tfjs_graph_converter.optimization import optimize_graph
 import tfjs_graph_converter.quirks as quirks
@@ -206,6 +207,9 @@ def _replace_unsupported_operations(
     weight_modifiers = dict()
     # split fused ops that contain unsupported activations
     new_graph, modifiers = split_fused_prelu(input_graph_def)
+    weight_modifiers.update(modifiers)
+    # split fused depthwise convolutions
+    new_graph, modifiers = split_fused_depthwise(new_graph)
     weight_modifiers.update(modifiers)
     # replace unsupported activations
     new_graph, modifiers = replace_prelu(new_graph)
@@ -446,7 +450,8 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
             for signature in signature_map.values():
                 signature_key_map.apply(signature)
 
-    model_dir, tags = _get_tags(model_list[0])
+    model_dir, tags = model_list[0]
+    tags = _get_tags(tags)
     graph, signature_def = load_graph_model_and_signature(model_dir)
     signature = signatures[model_dir] if model_dir in signatures else None
     signature_map = _get_signature_map(graph, signature_def, signature)

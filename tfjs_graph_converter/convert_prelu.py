@@ -30,13 +30,11 @@ def _split_fused_op(node: util.NodeDef,
     inputs = list(node.input)
     names_used = set()
 
-    def node_name(i):
-        name = util.generate_name_from(inputs[i], input_node_map)
+    def node_name(node_index):
+        name = generate_name_from(inputs[node_index], input_node_map)
         if name in names_used:
-            # avoid name collisions by adding the name of the fused operation
-            # (the first name is always unique)
-            name = util.generate_name_from(name, input_node_map,
-                                           suffix=fused_ops[i-2])
+            name = generate_name_from(name, input_node_map,
+                                      suffix=fused_ops[node_index-2])
         names_used.add(name)
         return name
 
@@ -44,6 +42,7 @@ def _split_fused_op(node: util.NodeDef,
     fused_op = util.copy_op_attrs(source=node, target=fused_op)
     bias_add = util.make_op_node(fused_ops[0], [fused_op, inputs[2]],
                                  node_name(2))
+    bias_add = util.copy_op_attrs(source=node, target=bias_add)
     activation = util.make_op_node(fused_ops[1], [bias_add] + inputs[3:],
                                    node_name(3))
     return [fused_op, bias_add, activation]
@@ -87,10 +86,10 @@ def split_fused_prelu(input_graph_def: util.GraphDef) -> util.GraphDef:
     to split the fused ops back into individual ops and replace unsupported
     functions by equivalent supported constructs later.
 
-    Arguments:
+    Args:
         input_graph_def: TF graph definition to examine
 
-    Results:
+    Returns:
         Updated copy of the input graph with matching nodes replaced by
         individual operations
     """
@@ -105,7 +104,7 @@ def replace_prelu(input_graph_def: util.GraphDef) -> util.GraphDef:
     """
     Replace all Prelu-activations in the graph with supported TF-operations.
 
-    Arguments:
+    Args:
         input_graph_def: TF graph definition to examine
 
     Returns:

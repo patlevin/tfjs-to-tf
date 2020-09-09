@@ -20,6 +20,11 @@ PRELU_MODEL_PATH = './models/prelu/'
 PRELU_MODEL_FILE = './models/prelu/keras.h5'
 MULTI_HEAD_PATH = './models/multi_head/'
 MULTI_HEAD_FILE = './models/multi_head/frozen_graph.pb'
+DEPTHWISE_RELU_PATH = './models/depthwise_relu/'
+DEPTHWISE_RELU_FILE = './models/depthwise_relu/frozen_graph.pb'
+DEPTHWISE_PRELU_PATH = './models/depthwise_prelu/'
+DEPTHWISE_PRELU_FILE = './models/depthwise_prelu/frozen_graph.pb'
+IMAGE_DATASET = './data/horses-and-humans.zip'
 
 
 def get_inputs(graph_def: GraphDef) -> List[NodeDef]:

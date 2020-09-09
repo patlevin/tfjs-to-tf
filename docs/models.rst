@@ -93,3 +93,21 @@ and another output for the upscaled autoencoder output.
 * **Files:**
     • ``multi_head/frozen_graph.pb``
     • ``multi_head/model.json``
+
+Depthwise (Relu/PReLU)
+----------------------
+
+Minimalistic CNN model for image classification loosely based on VGG16.
+The model is pretrained to classify 32x32 RGB images into images of
+horses and humans. It uses one-hot encoded classifier outputs with
+labels ["horse", "human"].
+
+* **Formats:** Frozen Graph ``[proto]``, TFJS Graph Model
+* **Weights:** ``[all]``
+* **Inputs:** (32, 32, 3) (*32x32 pixel RGB image normalised to [-1,1]*)
+* **Output:** (1, 2) (*one-hot classifier results*)
+* **Files:**
+    • ``depthwise_relu/frozen_graph.pb``
+    • ``depthwise_relu/model.json``
+    • ``depthwise_prelu/frozen_graph.pb``
+    • ``depthwise_prelu/model.json``

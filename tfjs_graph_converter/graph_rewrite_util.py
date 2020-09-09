@@ -317,6 +317,18 @@ def is_fused_matmul(node: NodeDef, activation: Text) -> bool:
     return is_fused_op(node, 'MatMul', activation)
 
 
+def is_fused_depthwise(node: NodeDef):
+    """Return whether a node is a fused DepthwiseConv2DNative with bias and
+       optional activation
+    """
+    if node.op == 'FusedDepthwiseConv2dNative' and 'fused_ops' in node.attr:
+        fused_ops = node.attr['fused_ops'].list.s
+        return (len(fused_ops) in (1, 2)
+                and fused_ops[0] in (b'BiasAdd', b'BiasAddV1'))
+    else:
+        return False
+
+
 def validate_supported_ops(input_graph_def: GraphDef) -> None:
     """
     Iterate through all graph nodes and validate operation names.

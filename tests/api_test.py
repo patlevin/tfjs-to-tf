@@ -52,6 +52,21 @@ def _shape_of(tensor_info):
     return tuple(dim.size for dim in tensor_info.tensor_shape.dim)
 
 
+def _argmax(tensor_list):
+    """Return class index and confidence from model output"""
+    tensor = tensor_list[0].numpy().reshape((2))
+    index = np.argmax(tensor)
+    return (index, tensor[index])
+
+
+def _load_image(path):
+    """Return an RGB image as a numpy array normalised to [-1, 1]"""
+    image = tf.keras.preprocessing.image.load_img(path)
+    array = tf.keras.preprocessing.image.img_to_array(image)
+    norm = tf.keras.layers.experimental.preprocessing.Rescaling(1./127.5, -1)
+    return tf.reshape(norm(array), [1] + list(array.shape))
+
+
 class ApiTest(unittest.TestCase):
     def test_load_graph_model_with_simple_model(self):
         """load_graph_model should load simple model"""
@@ -95,6 +110,44 @@ class ApiTest(unittest.TestCase):
         # actual test
         self.assertAlmostEqual(y_from_loaded_model, y_from_original_model,
                                places=4)
+
+    def test_load_graph_model_with_fused_depthwise(self):
+        """load_graph_model should split fused depthwise conv2d nodes"""
+        model_dir = testutils.get_path_to(testutils.DEPTHWISE_RELU_PATH)
+        graph = api.load_graph_model(model_dir)
+        loaded_model = testutils.graph_to_model(graph)
+        original_model_name = testutils.get_path_to(
+            testutils.DEPTHWISE_RELU_FILE)
+        original_model = testutils.graph_to_model(original_model_name)
+        # run both models and compare results
+        x = _load_image(testutils.get_path_to('./data/horse.jpg'))
+        y_from_loaded = _argmax(loaded_model(x))
+        y_from_original = _argmax(original_model(x))
+        # sanity check - should be reckognised as a horse (class 0)
+        self.assertEqual(y_from_original[0], 0)
+        # same class
+        self.assertEqual(y_from_loaded[0], y_from_loaded[0])
+        # same confidence
+        self.assertAlmostEqual(y_from_loaded[1], y_from_original[1], 4)
+
+    def test_load_graph_model_with_fused_depthwise_prelu(self):
+        """load_graph_model should split fused depthwise conv2d with prelu"""
+        model_dir = testutils.get_path_to(testutils.DEPTHWISE_PRELU_PATH)
+        graph = api.load_graph_model(model_dir)
+        loaded_model = testutils.graph_to_model(graph)
+        original_model_name = testutils.get_path_to(
+            testutils.DEPTHWISE_PRELU_FILE)
+        original_model = testutils.graph_to_model(original_model_name)
+        # run both models and compare results
+        x = _load_image(testutils.get_path_to('./data/human1.jpg'))
+        y_from_loaded = _argmax(loaded_model(x))
+        y_from_original = _argmax(original_model(x))
+        # sanity check - should be reckognised as a human (class 1)
+        self.assertEqual(y_from_original[0], 1)
+        # same class
+        self.assertEqual(y_from_loaded[0], y_from_loaded[0])
+        # same confidence
+        self.assertAlmostEqual(y_from_loaded[1], y_from_original[1], 4)
 
     def test_graph_def_to_graph_v1(self):
         """graph_def_to_graph_v1 should return tf.Graph for inference"""

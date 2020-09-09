@@ -4,22 +4,26 @@
 
 from pathlib import Path
 from typing import Callable, Iterable
+from zipfile import ZipFile
 import os
 import random
-
+import tempfile
 import numpy as np
 import tensorflow as tf
 
 from tensorflow.keras.layers import Conv2D, Dense, Flatten, Input, PReLU
+from tensorflow.keras.layers import DepthwiseConv2D, Dropout, MaxPooling2D
 from tensorflow.keras.models import Model
+from tensorflow.keras.preprocessing import image_dataset_from_directory
+from tensorflow.keras.layers.experimental.preprocessing import Rescaling
 from google.protobuf.json_format import MessageToJson
 from tensorflowjs.converters.converter import convert as convert_to_tfjs
-
 from tfjs_graph_converter.optimization import optimize_graph
 
 from testutils import GraphDef, model_to_graph, get_outputs
 from testutils import SAMPLE_MODEL_FILE_NAME, SIMPLE_MODEL_PATH_NAME
-from testutils import PRELU_MODEL_PATH, MULTI_HEAD_PATH
+from testutils import PRELU_MODEL_PATH, MULTI_HEAD_PATH, DEPTHWISE_RELU_PATH
+from testutils import IMAGE_DATASET, DEPTHWISE_PRELU_PATH
 from testutils import get_path_to
 
 
@@ -48,7 +52,7 @@ def deepmind_atari_net(num_classes: int = 10,
     x = Flatten(name='flatten')(x)
     x = Dense(512, activation='relu', name='dense1')(x)
     out = Dense(num_classes, activation='softmax', name='output')(x)
-    return Model(inp, out)
+    return Model(inp, out, name='model')
 
 
 def simple_model():
@@ -126,6 +130,69 @@ def multi_head_model():
     return Model(inputs, [classification_output, decoded_outputs])
 
 
+def _load_hoh_dataset(tmpdirname):
+    # load dataset from archive; return dataset tuple for training and testing
+    archive = get_path_to(IMAGE_DATASET)
+    with ZipFile(archive, 'r') as zip:
+        zip.extractall(tmpdirname)
+    path = os.path.join(tmpdirname, 'train')
+    norm = Rescaling(1./127.5, offset=-1)
+    train_ds = image_dataset_from_directory(path, image_size=(32, 32), seed=42)
+    train_ds = train_ds.map(
+        lambda x, y: (norm(x), tf.one_hot(y, depth=2)))
+    path = os.path.join(tmpdirname, 'test')
+    val_ds = image_dataset_from_directory(path, image_size=(32, 32), seed=42)
+    val_ds = val_ds.map(
+        lambda x, y: (norm(x), tf.one_hot(y, depth=2)))
+    return (train_ds, val_ds)
+
+
+def depthwise_model(activation: str = 'relu'):
+    # image classification model (basically a stripped-down VGG16 variant)
+    def _create_block(input_, activation=None, mode=None):
+        # we need a bias initialiser to generate BiasAdd nodes
+        bias_init = tf.keras.initializers.constant(.1)
+        if mode == 'depthwise':
+            if activation != 'prelu':
+                x = DepthwiseConv2D(3, padding='same', use_bias=True,
+                                    activation=activation,
+                                    bias_initializer=bias_init)(input_)
+            else:
+                x = DepthwiseConv2D(3, padding='same', use_bias=True,
+                                    bias_initializer=bias_init)(input_)
+                x = PReLU()(x)
+        else:
+            x = Conv2D(32, 3, activation='relu')(input_)
+        return MaxPooling2D(pool_size=(2, 2))(x)
+
+    input_ = Input((32, 32, 3))
+    x = _create_block(input_)
+    x = _create_block(x)
+    # these are just here for converter testing - a more efficient classifier
+    # would use more Conv2D layers with increasing sizes
+    x = _create_block(x, activation=activation, mode='depthwise')
+    x = _create_block(x, activation=None, mode='depthwise')
+    # two fully connected layers for classification
+    x = Flatten()(x)
+    x = Dense(32, activation='relu')(x)
+    x = Dropout(0.5, seed=23)(x)
+    x = Dense(2, activation='softmax')(x)
+    model = Model(input_, x)
+    model.compile(optimizer='adam',
+                  loss="categorical_crossentropy",
+                  metrics=['categorical_accuracy'])
+    # load training dataset (decompress to temp folder)
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        print('Loading dataset... ', end='', flush=True)
+        train_ds, validate_ds = _load_hoh_dataset(tmpdirname)
+        print('Ok.')
+        # train for 10 epochs - should settle at about 91% accuracy
+        print('Training the model... ', end='', flush=True)
+        model.fit(train_ds, validation_data=validate_ds, epochs=10)
+        print('Done')
+    return model
+
+
 def remove_weight_data(graph_def: GraphDef) -> None:
     """Remove dummy weight data from graph"""
     def _used_by(node_name, op_name):
@@ -187,3 +254,9 @@ if __name__ == '__main__':
     print('Generating multi-head model...')
     model = multi_head_model()
     save_tfjs_model(model, get_path_to(MULTI_HEAD_PATH))
+    print('Generating depthwise conv2d model...')
+    model = depthwise_model()
+    save_tfjs_model(model, get_path_to(DEPTHWISE_RELU_PATH))
+    print('Generating depthwise conv2d model with PReLU activation...')
+    model = depthwise_model('prelu')
+    save_tfjs_model(model, get_path_to(DEPTHWISE_PRELU_PATH))
