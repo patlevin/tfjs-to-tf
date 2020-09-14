@@ -56,7 +56,10 @@ def _mark_outputs_as_train_op(graph: tf.Graph,
         graph.add_to_collection(train_op, graph.get_operation_by_name(name))
 
 
-def _remove_unused_control_flow_inputs(graph_def: GraphKeys) -> GraphDef:
+def _remove_nodes(node, node_map, modifiers): return []
+
+
+def _remove_unused_control_flow_inputs(graph_def: GraphDef) -> GraphDef:
     """The graph optimizer marks unsused nodes, which we can remove
        from the graph
     """
@@ -64,7 +67,7 @@ def _remove_unused_control_flow_inputs(graph_def: GraphKeys) -> GraphDef:
         return (node.op == c.TFJS_NODE_PLACEHOLDER_KEY
                 and node.name.startswith('unused_control_flow_input'))
 
-    result, _ = replace_matching_nodes(graph_def, is_unused, lambda _: [])
+    result, _ = replace_matching_nodes(graph_def, is_unused, _remove_nodes)
     return result
 
 
@@ -82,6 +85,21 @@ def _set_optimization_options(config: ConfigProto, options: List[str]) -> None:
     """Set options for the graph optimizer"""
     rewriter_config = config.graph_options.rewrite_options
     rewriter_config.optimizers[:] = options
+
+
+def _remove_unused_nodes(graph_def: GraphDef) -> GraphDef:
+    """Remove nodes that don't have any connections in the graph.
+    A node is connected if its name occurs in the input of another node.
+    Nodes that have non-empty input lists are considered connected, as well.
+    """
+    has_ref = set()  # names of all nodes that are referenced by other nodes
+    for node in graph_def.node:
+        for inp in node.input:
+            has_ref.add(inp)
+
+    def _unconnected(n): return len(n.input) == 0 and n.name not in has_ref
+    result, _ = replace_matching_nodes(graph_def, _unconnected, _remove_nodes)
+    return result
 
 
 def optimize_graph(graph: tf.Graph, level=None) -> GraphDef:
@@ -108,4 +126,5 @@ def optimize_graph(graph: tf.Graph, level=None) -> GraphDef:
     ])
     optimised_graph = _run_tf_optimizer(config, graph, signature_def)
     optimised_graph = _remove_unused_control_flow_inputs(optimised_graph)
+    optimised_graph = _remove_unused_nodes(optimised_graph)
     return optimised_graph
