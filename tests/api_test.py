@@ -126,7 +126,7 @@ class ApiTest(unittest.TestCase):
         # sanity check - should be reckognised as a horse (class 0)
         self.assertEqual(y_from_original[0], 0)
         # same class
-        self.assertEqual(y_from_loaded[0], y_from_loaded[0])
+        self.assertEqual(y_from_loaded[0], y_from_original[0])
         # same confidence
         self.assertAlmostEqual(y_from_loaded[1], y_from_original[1], 4)
 
@@ -145,7 +145,7 @@ class ApiTest(unittest.TestCase):
         # sanity check - should be reckognised as a human (class 1)
         self.assertEqual(y_from_original[0], 1)
         # same class
-        self.assertEqual(y_from_loaded[0], y_from_loaded[0])
+        self.assertEqual(y_from_loaded[0], y_from_original[0])
         # same confidence
         self.assertAlmostEqual(y_from_loaded[1], y_from_original[1], 4)
 
