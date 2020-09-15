@@ -4,7 +4,7 @@
 
 from typing import Any, Callable, Dict, List, Optional, Text, Tuple, Union
 
-from tensorflow import as_dtype
+from tensorflow import as_dtype, cast as tensor_cast, Tensor as TfTensor
 from tensorflow.core.framework.attr_value_pb2 import AttrValue
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.core.framework.node_def_pb2 import NodeDef
@@ -26,6 +26,7 @@ Inputs = Union[NameOrNode, InputList]
 WeightTransform = Callable[[Tensor], Tensor]
 WeightModifiers = Dict[Text, WeightTransform]
 NodeTransform = Callable[[NodeDef, NameToNode, WeightModifiers], NodeList]
+TensorDict = Dict[str, TfTensor]
 
 
 def get_op_def(op_name: Text) -> Optional[OpDef]:
@@ -349,3 +350,26 @@ def validate_supported_ops(input_graph_def: GraphDef) -> None:
             if any(unsupported_ops):
                 raise ValueError(f'Node {node.name}: unsupported fused op '
                                  f'{unsupported_ops[0]}')
+
+
+def harmonize_dtypes(graph_def: GraphDef, weights: TensorDict) -> TensorDict:
+    """Iterate through the weight dictionary and ensure matching dtypes
+    between tensor data and graph nodes
+
+    Args:
+        graph_def: GraphDef proto containing the network layout
+        weights: Dictionary that maps node names to tf tensor data
+
+    Returns:
+        Updated weight dictionary
+    """
+    node_by_name = get_input_node_map(graph_def)
+    for key, value in weights.items():
+        if key in node_by_name:                 # must refer to existing node
+            node = node_by_name[key]
+            if 'dtype' in node.attr:            # must have 'dtype' attribute
+                node_type = as_dtype(node.attr['dtype'].type)
+                tensor_type = as_dtype(value.dtype)
+                if node_type != tensor_type:    # must have difference in type
+                    weights[key] = tensor_cast(value, node_type)
+    return weights

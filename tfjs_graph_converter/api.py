@@ -27,6 +27,7 @@ import tfjs_graph_converter.common as common
 from tfjs_graph_converter.convert_prelu import replace_prelu, split_fused_prelu
 from tfjs_graph_converter.convert_fused_depthwise import split_fused_depthwise
 from tfjs_graph_converter.graph_rewrite_util import validate_supported_ops
+from tfjs_graph_converter.graph_rewrite_util import harmonize_dtypes
 from tfjs_graph_converter.optimization import optimize_graph
 import tfjs_graph_converter.quirks as quirks
 import tfjs_graph_converter.util as util
@@ -195,6 +196,7 @@ def _create_graph(graph_def: GraphDef,
             if key in modifiers:
                 value = (modifiers[key])(value)
             weight_dict[key] = tf.convert_to_tensor(value)
+        weight_dict = harmonize_dtypes(graph_def, weight_dict)
         tf.graph_util.import_graph_def(graph_def, weight_dict, name='')
 
     graph_def = optimize_graph(graph)

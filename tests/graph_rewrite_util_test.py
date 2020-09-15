@@ -4,6 +4,7 @@
 import unittest
 
 import numpy as np
+from tensorflow import convert_to_tensor
 from tfjs_graph_converter import graph_rewrite_util as rewrite
 import testutils
 
@@ -362,6 +363,35 @@ class GraphRewriteUtilTest(unittest.TestCase):
         graph_def.node.extend([unsupported_fused_op])
         self.assertRaises(ValueError,
                           lambda: rewrite.validate_supported_ops(graph_def))
+
+    def test_harmonize_dtypes(self):
+        """harmonize_dtypes should change tensor dtype to node dtype"""
+        graph_def = rewrite.GraphDef()
+        const_nodes = [
+            # tensor "a" is float32
+            testutils.node_proto_from_json('{"name":"a","op":"Const","attr":'
+                                           '{"dtype":{"type":"DT_FLOAT"}}}'),
+            # tensor "b" is int64
+            testutils.node_proto_from_json('{"name":"b","op":"Const","attr":'
+                                           '{"dtype":{"type":"DT_INT64"}}}')
+        ]
+        graph_def.node.extend(const_nodes)
+        weight_dict = {
+            # weight "a" matches tensor "a"
+            'a': convert_to_tensor(np.arange(9., dtype=np.float32).reshape(
+                (1, 3, 3))),
+            # weight "b" is int32 (must be widened to match node)
+            'b': convert_to_tensor(np.arange(4, dtype=np.int32)),
+            # no matching node for weight "c"
+            'c': convert_to_tensor(np.array(23, dtype=np.int64))
+        }
+        result = rewrite.harmonize_dtypes(graph_def, weight_dict)
+        # existing should be unchanged if matching
+        self.assertEqual(result['a'].numpy().dtype, np.float32)
+        # existing should be altered to match node
+        self.assertEqual(result['b'].numpy().dtype, np.int64)
+        # non-existing should be unchanged
+        self.assertEqual(result['c'].numpy().dtype, np.int64)
 
 
 if __name__ == '__main__':

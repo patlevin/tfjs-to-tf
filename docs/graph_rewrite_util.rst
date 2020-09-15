@@ -54,6 +54,8 @@ Type                 Description
                      given node with.
 -------------------- ----------------------------------------------------------
 **Tensor**           Alias for ``numpy.ndarray``
+-------------------- ----------------------------------------------------------
+**TensorDict**       Alias for ``Dict[str, tensorflow.Tensor]``
 ==================== ==========================================================
 
 ``get_op_def``
@@ -207,3 +209,19 @@ unsupported activation function that can be rewritten.
 Iterates through all graph nodes and checks whether the node's operation is
 actually supported by TF. Raises a ``ValueError`` if an unsupported operation
 is found.
+
+``harmonize_dtypes``
+^^^^^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+    harmonize_dtypes(
+        graph_def: GraphDef,
+        weights: Dict[str, tf.Tensor]
+    ) -> Dict[str, tf.Tensor]
+
+Iterates through a given weight dictionary and ensures that the type of weight
+tensor elements and graph node attributes match. The graph remains unchanged,
+while the tensor data is widened (or shortened) to match the graph node type.
+The returned dictionary maps tensor names to tensor data that is guaranteed to
+match the type of the corresponding graph node.
