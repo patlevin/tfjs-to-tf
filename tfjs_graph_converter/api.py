@@ -24,6 +24,7 @@ from tensorflowjs.read_weights import read_weights
 from google.protobuf.json_format import ParseDict
 
 import tfjs_graph_converter.common as common
+from tfjs_graph_converter.compat import convert_int64_to_int32
 from tfjs_graph_converter.convert_prelu import replace_prelu, split_fused_prelu
 from tfjs_graph_converter.convert_fused_depthwise import split_fused_depthwise
 from tfjs_graph_converter.graph_rewrite_util import validate_supported_ops
@@ -172,6 +173,20 @@ def _extract_signature_def(model_json: Dict[str, Any]
     return signature_def
 
 
+def _set_signature_dtypes(graph: tf.Graph, signature_def: util.SignatureDef
+                          ) -> Tuple[tf.Graph, util.SignatureDef]:
+    """Set the dtype of each input and output to match the graph and return
+       both
+    """
+    for key, value in signature_def.inputs.items():
+        node = graph.get_tensor_by_name(value.name)
+        value.dtype = node.dtype.as_datatype_enum
+    for key, value in signature_def.outputs.items():
+        node = graph.get_tensor_by_name(value.name)
+        value.dtype = node.dtype.as_datatype_enum
+    return graph, signature_def
+
+
 def _create_graph(graph_def: GraphDef,
                   weight_dict: Dict[str, Tensor],
                   modifiers: Dict[str, Callable]) -> tf.Graph:
@@ -220,7 +235,8 @@ def _replace_unsupported_operations(
 
 
 def _convert_graph_model_to_graph(model_json: Dict[str, Any],
-                                  base_path: str
+                                  base_path: str,
+                                  compat_mode: bool = False
                                   ) -> Tuple[tf.Graph, util.SignatureDef]:
     """
     Convert TFJS JSON model to TF Graph
@@ -228,6 +244,7 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
     Args:
         model_json: JSON dict from TFJS model file
         base_path:  Path to the model file (where to find the model weights)
+        compat_mode: True, if only TFJS datatypes should be used
 
     Returns:
         Tuple of TF Graph for inference or saving and TF signature definition
@@ -249,14 +266,16 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
     name, data = common.TFJS_NAME_KEY, common.TFJS_DATA_KEY
     weight_dict = dict((weight[name], weight[data]) for weight in weight_list)
     graph_def, weight_modifiers = _replace_unsupported_operations(graph_def)
-
+    if compat_mode:
+        graph_def = convert_int64_to_int32(graph_def)
     graph = _create_graph(graph_def, weight_dict, weight_modifiers)
     signature_def = _extract_signature_def(model_json) or util.infer_signature(
         graph)
-    return (graph, signature_def)
+    return _set_signature_dtypes(graph, signature_def)
 
 
-def load_graph_model_and_signature(model_dir: str
+def load_graph_model_and_signature(model_dir: str,
+                                   compat_mode: bool = False
                                    ) -> Tuple[tf.Graph, util.SignatureDef]:
     """
     Load a TFJS Graph Model from a directory
@@ -265,6 +284,7 @@ def load_graph_model_and_signature(model_dir: str
         model_dir: Directory that contains the tfjs model.json and weights;
                 alternatively name and path of the model.json if the name
                 differs from the default ("model.json")
+        compat_mode: If True, only TFJS-compatible datatypes are used
 
     Returns:
         Tupel of TF frozen graph for inference or saving and TF signature def
@@ -273,10 +293,10 @@ def load_graph_model_and_signature(model_dir: str
     model_file_path = os.path.join(model_path, model_name)
     with open(model_file_path, "r") as model_file:
         model_json = json.load(model_file)
-    return _convert_graph_model_to_graph(model_json, model_path)
+    return _convert_graph_model_to_graph(model_json, model_path, compat_mode)
 
 
-def load_graph_model(model_dir: str) -> tf.Graph:
+def load_graph_model(model_dir: str, compat_mode: bool = False) -> tf.Graph:
     """
     Load a TFJS Graph Model from a directory
 
@@ -284,11 +304,12 @@ def load_graph_model(model_dir: str) -> tf.Graph:
         model_dir: Directory that contains the tfjs model.json and weights;
                 alternatively name and path of the model.json if the name
                 differs from the default ("model.json")
+        compat_mode: If True, only TFJS-compatible datatypes are used
 
     Returns:
         TF frozen graph for inference or saving
     """
-    graph, _ = load_graph_model_and_signature(model_dir)
+    graph, _ = load_graph_model_and_signature(model_dir, compat_mode)
     return graph
 
 
@@ -338,13 +359,15 @@ def graph_to_function_v2(graph: Union[GraphDef, tf.Graph]) -> Callable:
         tf.nest.map_structure(import_graph.as_graph_element, outputs))
 
 
-def graph_model_to_frozen_graph(model_dir: str, export_path: str) -> str:
+def graph_model_to_frozen_graph(model_dir: str, export_path: str,
+                                compat_mode: bool = False) -> str:
     """
     Convert a TFJS graph model to a frozen TF graph
 
     Args:
         model_dir: Directory that contains the TFJS JSON model and weights
         export_path: Path to the frozen graph (e.g. './output.pb')
+        compat_mode: If True, only TFJS-compatible datatypes are used
 
     Returns:
         The path to the output proto-file.
@@ -352,7 +375,7 @@ def graph_model_to_frozen_graph(model_dir: str, export_path: str) -> str:
     export_dir = os.path.dirname(export_path)
     model_name = os.path.basename(export_path)
 
-    graph = load_graph_model(model_dir)
+    graph = load_graph_model(model_dir, compat_mode)
     return tf.io.write_graph(graph, export_dir, model_name, as_text=False)
 
 
@@ -360,7 +383,8 @@ def graph_model_to_saved_model(model_dir: str,
                                export_dir: str,
                                tags: List[str] = None,
                                signature_def_map: dict = None,
-                               signature_key_map: RenameMap = None) -> str:
+                               signature_key_map: RenameMap = None,
+                               compat_mode: bool = False) -> str:
     """
     Convert a TFJS graph model to a SavedModel
 
@@ -387,11 +411,13 @@ def graph_model_to_saved_model(model_dir: str,
                            keys. The default signature uses tensor names for
                            signature keys. This argument allows to map tensor
                            names to different keys.
+        compat_mode: If True, only TFJS-compatible datatypes are used
 
     Returns:
         The path to which the model was written.
     """
-    graph, signature_def = load_graph_model_and_signature(model_dir)
+    graph, signature_def = load_graph_model_and_signature(model_dir,
+                                                          compat_mode)
     builder = tf.compat.v1.saved_model.Builder(export_dir)
     signature_map = _get_signature_map(graph, signature_def, signature_def_map)
     tags = _get_tags(tags)
@@ -408,7 +434,8 @@ def graph_model_to_saved_model(model_dir: str,
 def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
                                 export_dir: str,
                                 signatures: dict = None,
-                                signature_keys: Dict[str, RenameMap] = None
+                                signature_keys: Dict[str, RenameMap] = None,
+                                compat_mode: bool = False
                                 ) -> str:
     """
     Read multiple TFJS graph models and saves them in a single SavedModel
@@ -438,6 +465,7 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
             `model_list` tuples) to per-model signature key mappings. This
             allows a remapping of signature inputs and outputs to different
             keys (the tensor names stay unaffected).
+        compat_mode: If True, only TFJS-compatible datatypes are used
 
     Returns:
         The path to which the model was written.
@@ -454,7 +482,8 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
 
     model_dir, tags = model_list[0]
     tags = _get_tags(tags)
-    graph, signature_def = load_graph_model_and_signature(model_dir)
+    graph, signature_def = load_graph_model_and_signature(model_dir,
+                                                          compat_mode)
     signature = signatures[model_dir] if model_dir in signatures else None
     signature_map = _get_signature_map(graph, signature_def, signature)
     _apply_key_map(model_dir, signature_map)

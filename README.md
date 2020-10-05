@@ -55,6 +55,7 @@ for quick and easy model conversion.
 | `-h`, `--help` | Show help message and exit |
 | `--output_format` | Use `tf_frozen_model` (the default) to save a Tensorflow frozen model. `tf_saved_model` exports to a Tensorflow _SavedModel_ instead. |
 | `--saved_model_tags` | Specifies the tags of the MetaGraphDef to save, in comma separated string format. Defaults to "serve". Applicable only if `--output_format` is `tf_saved_model` |
+| `-c`, `--compat_mode` | Keep the input types compatible with TensorflowJS <=2.4.x |
 | `-v`, `--version` | Shows the version of the converter and its dependencies. |
 | `-s`, `--silent` | Suppresses any output besides error messages. |
 

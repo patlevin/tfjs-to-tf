@@ -62,6 +62,13 @@ def get_arg_parser():
         choices=set([common.CLI_SAVED_MODEL, common.CLI_FROZEN_MODEL]),
         help=f'Output format. Default: "{common.CLI_FROZEN_MODEL}".'
     )
+    parser.add_argument(
+        '--' + common.CLI_COMPATIBLE,
+        '-c',
+        dest='compat_mode',
+        action='store_true',
+        help='Keep the input types compatible with TFJS <=2.4.x'
+    )
     group = parser.add_argument_group(f'{common.CLI_SAVED_MODEL} specific',
                                       'Arguments that apply to SavedModel '
                                       'export only.')
@@ -178,13 +185,15 @@ def convert(arguments):
     start_time = time.perf_counter()
 
     if args.output_format == common.CLI_FROZEN_MODEL:
-        api.graph_model_to_frozen_graph(args.input_path, args.output_path)
+        api.graph_model_to_frozen_graph(args.input_path, args.output_path,
+                                        args.compat_mode)
     elif args.output_format == common.CLI_SAVED_MODEL:
         api.graph_model_to_saved_model(
             args.input_path, args.output_path,
             tags=args.saved_model_tags,
             signature_def_map=_get_signature(args),
-            signature_key_map=_get_signature_keys(args))
+            signature_key_map=_get_signature_keys(args),
+            compat_mode=args.compat_mode)
     else:
         raise ValueError(f"Unsupported output format: {args.output_format}")
 

@@ -101,7 +101,8 @@ __ https://www.tensorflow.org/api_docs/python/tf/Graph
 .. code:: python
 
    load_graph_model_and_signature(
-        model_dir: str
+        model_dir: str,
+        compat_mode: bool = False
    ) -> Tuple[tf.Graph, Optional[SignatureDef]]
 
 Loads a tensorflowjs graph model from a directory and returns a TF v1
@@ -117,6 +118,10 @@ that contains the inputs and outputs of the model.
     Alternatively, the path and name of the JSON file can be
     specified directly. Weight files must be located in the
     same directory as the model file.
+
+**compat_mode**
+    Set this argument to ``True`` to ensure that the resulting graph is
+    compatible with TensorflowJS if possible.
 
 ..
 
@@ -282,7 +287,8 @@ input tensors as arguments and returns a list of model outputs as tensors.
 
    graph_model_to_frozen_graph(
         model_dir: str,
-        export_path: str
+        export_path: str,
+        compat_mode: bool = False
    ) -> str
 
 Converts a tensorflowjs graph model to a tensorflow frozen graph.
@@ -302,6 +308,10 @@ The resulting graph is written to a **binary** protobuf message.
     Directory and file name to save the frozen graph to.
     The file name usually ends in `.pb` and the directory
     must exist.
+
+**compat_mode**
+    Set this argument to ``True`` to ensure that the resulting graph is
+    compatible with TensorflowJS if possible.
 
 ..
 
@@ -333,7 +343,8 @@ written.
         export_dir: str,
         tags: Union[str, List[str]] = None,
         signature_def_map: dict = None,
-        signature_key_map: RenameMap = None
+        signature_key_map: RenameMap = None,
+        compat_mode: bool = False
    ) -> str
 
 Converts a tensorflowjs graph model to a tensorflow `SavedModel`__
@@ -379,6 +390,10 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
 **signature_key_map**
     Optional mapping of tensor names to custom input or output names, see
     `RenameMap`_.
+
+**compat_mode**
+    Set this argument to ``True`` to ensure that the resulting graph is
+    compatible with TensorflowJS if possible.
 
 ..
 
@@ -439,7 +454,8 @@ multi-head model):
         model_list: List[Tuple[str, List[str]]],
         export_dir: str,
         signatures: dict = None,
-        signature_keys: Dict[str, RenameMap] = None
+        signature_keys: Dict[str, RenameMap] = None,
+        compat_mode: bool = False
     ) -> str
 
 This function merges several tensorflowjs graph models into a single
@@ -477,6 +493,10 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
     Optional dict that maps model names (e.g. the first item of the tuples in
     ``model_list``) to `RenameMap`_ instances for assigning new names to model
     inputs and outputs.
+
+**compat_mode**
+    Set this argument to ``True`` to ensure that the resulting graph is
+    compatible with TensorflowJS if possible.
 
 ..
 

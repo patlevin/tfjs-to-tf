@@ -53,6 +53,9 @@ aren't very useful when called from within another script, though
                                Multiple tags can be given as a
                                comma-separated list.
     -------------------------- ----------------------------------------------
+    --compat_mode, -c          Keep the input types compatible with
+                               TensorflowJS <=v2.4.x
+    -------------------------- ----------------------------------------------
     --version, -v              Prints the library version and the versions of
                                dependencies (TF, TFJS). *Useful only in CLI*
     -------------------------- ----------------------------------------------
