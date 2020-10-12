@@ -40,6 +40,7 @@ def _get_input_node(ref: r.NodeDef, idx: int, node_map: r.NameToNode
                     ) -> Tuple[r.NodeDef, int]:
     """Return node and ouptut index of node input idx"""
     m = re.match(r'([^:]+)(:(\d+))?', ref.input[idx])
+    assert(m is not None)
     node = node_map[m.groups()[0]]
     ouput_idx = int(m.groups()[-1] or 0)
     return node, ouput_idx

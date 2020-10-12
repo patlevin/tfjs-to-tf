@@ -12,7 +12,8 @@ import os
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
-import numpy
+from tensorflow.compat.v1 import GraphDef
+from numpy import ndarray as Tensor
 
 from tensorflowjs.converters.common import ARTIFACT_MODEL_JSON_FILE_NAME
 from tensorflowjs.converters.common import ARTIFACT_MODEL_TOPOLOGY_KEY
@@ -32,9 +33,6 @@ from tfjs_graph_converter.graph_rewrite_util import harmonize_dtypes
 from tfjs_graph_converter.optimization import optimize_graph
 import tfjs_graph_converter.quirks as quirks
 import tfjs_graph_converter.util as util
-
-GraphDef = tf.compat.v1.GraphDef
-Tensor = numpy.ndarray
 
 SIGNATURE_OUTPUTS = 'outputs'
 SIGNATURE_METHOD = 'method_name'
@@ -505,7 +503,7 @@ def graph_models_to_saved_model(model_list: List[Tuple[str, List[str]]],
 
 
 def _get_signature_map(graph: tf.Graph, default_signature_def: dict,
-                       signature_def_map: dict) -> dict:
+                       signature_def_map: Optional[dict]) -> dict:
     """Select the signature def map from default & user provided signatures"""
     default_key = tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY
     if signature_def_map is None:

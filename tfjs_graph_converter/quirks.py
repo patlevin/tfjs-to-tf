@@ -48,7 +48,7 @@ def _convert_string_attrs(node: Dict[str, Any]) -> None:
     str_key = common.TFJS_ATTR_STRING_VALUE_KEY
     # some layers (e.g. PReLU) don't contain the `attr` key,
     # so test for its presence
-    attrs = {}
+    attrs: list = []
     if attr_key in node:
         attrs = _find_if_has_key(node[attr_key], key=str_key, of_type=list)
     for attr in attrs:
@@ -71,16 +71,16 @@ def _fix_dilation_attrs(node: Dict[str, Any]) -> None:
     """
     path = ['attr', 'dilations', 'list']
     values = node
+    found = True
     for key in path:
         if key in values:
             values = values[key]
         else:
-            values = None
+            found = False
             break
     # if dilations are present, they're stored in 'values' now
     ints = common.TFJS_ATTR_INT_VALUE_KEY
-    if values is not None and ints in values \
-            and isinstance(values[ints], list):
+    if found and ints in values and isinstance(values[ints], list):
         value = values[ints]
         if len(value) != 4:
             # must be NCHW-formatted 4D tensor or else TF can't handle it

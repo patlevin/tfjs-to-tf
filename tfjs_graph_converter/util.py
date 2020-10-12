@@ -16,7 +16,7 @@ from tensorflow.core.protobuf.meta_graph_pb2 import TensorInfo
 import tfjs_graph_converter.common as c
 import tfjs_graph_converter.graph_rewrite_util as rewrite
 
-_DTYPE_MAP: List[type] = [
+_DTYPE_MAP: List[Optional[type]] = [
     None,
     np.float32,
     np.float64,
@@ -33,7 +33,7 @@ _DTYPE_MAP: List[type] = [
 NodeInfo = namedtuple('NodeInfo', 'name shape dtype tensor')
 
 
-def _is_op_node(node: NodeInfo) -> bool:
+def _is_op_node(node: NodeDef) -> bool:
     return node.op not in (c.TFJS_NODE_CONST_KEY, c.TFJS_NODE_PLACEHOLDER_KEY)
 
 
@@ -41,7 +41,7 @@ def _op_nodes(graph_def: GraphDef) -> List[NodeDef]:
     return [node for node in graph_def.node if _is_op_node(node)]
 
 
-def _map_type(type_id: int) -> type:
+def _map_type(type_id: int) -> Optional[type]:
     if type_id < 0 or type_id > len(_DTYPE_MAP):
         raise ValueError(f'Unsupported data type: {type_id}')
     np_type = _DTYPE_MAP[type_id]
@@ -58,7 +58,7 @@ def _get_shape(node: NodeDef) -> List[int]:
         return []
 
 
-def _dtype(node: NodeDef) -> Optional[int]:
+def _dtype(node: NodeDef) -> Optional[type]:
     # accessing non-existing keys would CREATE the key in mapfields!
     if c.TFJS_ATTR_DTYPE_KEY in node.attr:
         return _map_type(node.attr[c.TFJS_ATTR_DTYPE_KEY].type)
@@ -237,7 +237,7 @@ def _validate_mapping(graph_def: GraphDef, valid_nodes: List[NodeInfo],
                       mapping: dict):
     valid_names = set(info.name for info in valid_nodes)
     existing_nodes = set(node.name for node in graph_def.node)
-    inverted_mapping = defaultdict(list)
+    inverted_mapping: dict = defaultdict(list)
     for old_name, new_name in mapping.items():
         if old_name not in valid_names:
             raise ValueError(f'"{old_name}" is not a valid node name. '

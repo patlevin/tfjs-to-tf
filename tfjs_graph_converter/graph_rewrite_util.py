@@ -62,10 +62,8 @@ def make_op_node(op_name: Text, inputs: Inputs, name: Text = None,
     Returns:
         TF graph node definition for the given operation, inputs, and name
     """
-    input_list = inputs
     # convert scalar input into list
-    if not isinstance(inputs, list):
-        input_list = [input_list]
+    input_list: list = [inputs] if not isinstance(inputs, list) else inputs
     # convert list items to strings
     for i, item in enumerate(input_list):
         if hasattr(item, 'name'):
@@ -112,7 +110,7 @@ def make_const_node(data: Tensor, name: str = None) -> NodeDef:
     return node_def
 
 
-def copy_op_attrs(source: NodeDef = None, target: NodeDef = None) -> NodeDef:
+def copy_op_attrs(source: NodeDef, target: NodeDef) -> NodeDef:
     """
     Copy valid node attributes from one node to another.
     Only attributes supported by the target node's operation will be copied.
@@ -233,7 +231,7 @@ def replace_matching_nodes(input_graph_def: GraphDef,
     input_node_map = get_input_node_map(input_graph_def)
     nodes_to_remap = {}
     inputs_to_remap = {}
-    weight_modifiers = {}
+    weight_modifiers: WeightModifiers = {}
     for node in input_graph_def.node:
         if predicate(node):
             # the name of a replaced node becomes available for use right away

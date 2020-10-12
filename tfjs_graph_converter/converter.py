@@ -7,6 +7,8 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from typing import Optional
+
 import argparse
 import re
 import sys
@@ -126,7 +128,7 @@ def get_arg_parser():
     return parser
 
 
-def _get_signature(namespace: argparse.Namespace) -> dict:
+def _get_signature(namespace: argparse.Namespace) -> Optional[dict]:
     return {namespace.signature_key: {
         api.SIGNATURE_OUTPUTS: namespace.outputs,
         api.SIGNATURE_METHOD: namespace.method_name
