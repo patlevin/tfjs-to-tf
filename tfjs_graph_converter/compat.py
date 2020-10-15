@@ -4,7 +4,7 @@
 
 import re
 from collections import defaultdict
-from typing import Tuple
+from typing import Dict, Tuple
 from tfjs_graph_converter import util
 from tfjs_graph_converter import graph_rewrite_util as r
 from tensorflow.python.framework import dtypes
@@ -78,8 +78,10 @@ def convert_int64_to_int32(graph_def: r.GraphDef) -> r.GraphDef:
     for node in graph_def.node:
         for index, name in enumerate(node.input):
             input_map[name].append((index, node))
-    type_cast_ops = []              # type cast ops to add to the graph
-    type_cast_candidates = dict()   # nodes that require a type cast op
+    # type cast ops to add to the graph
+    type_cast_ops = []
+    # nodes that require a type cast op
+    type_cast_candidates: Dict[str, Tuple[int, r.NodeDef]] = {}
 
     for node in map(lambda x: node_map[x], convert):
         _set_tensor_dtype(node, _DT_INT32)

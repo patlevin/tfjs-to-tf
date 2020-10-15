@@ -135,7 +135,8 @@ def _get_signature(namespace: argparse.Namespace) -> Optional[dict]:
     }} if namespace.outputs is not None else None
 
 
-def _get_signature_keys(namespace: argparse.Namespace) -> api.RenameMap:
+def _get_signature_keys(namespace: argparse.Namespace
+                        ) -> Optional[api.RenameMap]:
     if namespace.rename is not None:
         return api.RenameMap(namespace.rename)
     else:
