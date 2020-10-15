@@ -48,7 +48,7 @@ def _split_fused_op(node: util.NodeDef,
     return [fused_op, bias_add, activation]
 
 
-def _split_prelu(node: util.NodeList,
+def _split_prelu(node: util.NodeDef,
                  input_node_map: util.NameToNode,
                  weight_modifiers: util.WeightModifiers) -> util.NodeList:
     # Prelu activation is not supported by TF so this functions generates an
