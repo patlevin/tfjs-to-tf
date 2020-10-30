@@ -183,6 +183,7 @@ def depthwise_model(activation: str = 'relu'):
                   metrics=['categorical_accuracy'])
     # load training dataset (decompress to temp folder)
     with tempfile.TemporaryDirectory() as tmpdirname:
+        random.seed(23)
         print('Loading dataset... ', end='', flush=True)
         train_ds, validate_ds = _load_hoh_dataset(tmpdirname)
         print('Ok.')
