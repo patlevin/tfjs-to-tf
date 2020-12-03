@@ -106,7 +106,7 @@ class ApiTest(unittest.TestCase):
         # sanity check; fails if model is different from the one we expected:
         # we want a model that predicts whether a point (px,py,pz) is inside
         # a sphere at (cx,cy,cz) of radius r
-        self.assertAlmostEqual(y_from_original_model, 1, places=1)
+        self.assertGreater(y_from_original_model, 0.8)
         # actual test
         self.assertAlmostEqual(y_from_loaded_model, y_from_original_model,
                                places=4)
@@ -524,6 +524,12 @@ class ApiTest(unittest.TestCase):
         self.assertIn('output', updated.outputs)
         # keep the tensor name!
         self.assertEqual(updated.outputs['output'].name, 'Identity:0')
+
+    def test_load_graph_model_and_signature_format_check(self):
+        """load_graph_model_and_signature verifies model format"""
+        model = testutils.get_path_to(testutils.KERAS_MODEL_FILE_NAME)
+        self.assertRaises(api.ModelFormatError,
+                          lambda: api.load_graph_model_and_signature(model))
 
 
 if __name__ == '__main__':

@@ -25,6 +25,7 @@ DEPTHWISE_RELU_FILE = './models/depthwise_relu/frozen_graph.pb'
 DEPTHWISE_PRELU_PATH = './models/depthwise_prelu/'
 DEPTHWISE_PRELU_FILE = './models/depthwise_prelu/frozen_graph.pb'
 IMAGE_DATASET = './data/horses-and-humans.zip'
+KERAS_MODEL_FILE_NAME = './models/keras.json'
 
 
 def get_inputs(graph_def: GraphDef) -> List[NodeDef]:

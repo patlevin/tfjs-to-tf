@@ -10,6 +10,7 @@ from __future__ import unicode_literals
 from typing import Optional
 
 import argparse
+import os
 import re
 import sys
 import time
@@ -187,18 +188,24 @@ def convert(arguments):
 
     start_time = time.perf_counter()
 
-    if args.output_format == common.CLI_FROZEN_MODEL:
-        api.graph_model_to_frozen_graph(args.input_path, args.output_path,
-                                        args.compat_mode)
-    elif args.output_format == common.CLI_SAVED_MODEL:
-        api.graph_model_to_saved_model(
-            args.input_path, args.output_path,
-            tags=args.saved_model_tags,
-            signature_def_map=_get_signature(args),
-            signature_key_map=_get_signature_keys(args),
-            compat_mode=args.compat_mode)
-    else:
-        raise ValueError(f"Unsupported output format: {args.output_format}")
+    try:
+        if args.output_format == common.CLI_FROZEN_MODEL:
+            api.graph_model_to_frozen_graph(args.input_path, args.output_path,
+                                            args.compat_mode)
+        elif args.output_format == common.CLI_SAVED_MODEL:
+            api.graph_model_to_saved_model(
+                args.input_path, args.output_path,
+                tags=args.saved_model_tags,
+                signature_def_map=_get_signature(args),
+                signature_key_map=_get_signature_keys(args),
+                compat_mode=args.compat_mode)
+        else:
+            raise ValueError(
+                    f"Unsupported output format: {args.output_format}")
+    except api.ModelFormatError as ex:
+        ex.input = args.input_path
+        ex.output = args.output_path
+        raise ex
 
     end_time = time.perf_counter()
     info("Done.")
@@ -226,6 +233,22 @@ def main(argv):
     except ValueError as ex:
         msg = ex.args[0] if len(ex.args) > 0 else ex
         print(f'Error: {msg}')
+    except api.ModelFormatError as ex:
+        if ex.format == tfjs.converters.common.TFJS_LAYERS_MODEL_FORMAT:
+            inputs = ex.input
+            outputs = (ex.output if os.path.isdir(ex.output)
+                       else os.path.dirname(ex.output))
+            print('Error: The model is a KERAS layers-model.')
+            print('This converter only handles GRAPH models.')
+            print('You can load and convert Keras models directly ' +
+                  '(using Python):\n')
+            print('\timport tensorflowjs as tfjs\n')
+            print(f'\tmodel = tfjs.converters.load_keras_model("{inputs}")')
+            print(f'\tmodel.save("{outputs}")')
+        elif ex.format:
+            print(f'Unknown model format: "{ex.format}"')
+        else:
+            print('The provided model is not a TensorFlow.js model.')
 
 
 if __name__ == '__main__':

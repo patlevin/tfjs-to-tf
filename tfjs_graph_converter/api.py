@@ -20,6 +20,8 @@ from tensorflowjs.converters.common import ARTIFACT_MODEL_TOPOLOGY_KEY
 from tensorflowjs.converters.common import ARTIFACT_WEIGHTS_MANIFEST_KEY
 from tensorflowjs.converters.common import SIGNATURE_KEY
 from tensorflowjs.converters.common import USER_DEFINED_METADATA_KEY
+from tensorflowjs.converters.common import FORMAT_KEY
+from tensorflowjs.converters.common import TFJS_GRAPH_MODEL_FORMAT
 
 from tensorflowjs.read_weights import read_weights
 from google.protobuf.json_format import ParseDict
@@ -36,6 +38,22 @@ import tfjs_graph_converter.util as util
 
 SIGNATURE_OUTPUTS = 'outputs'
 SIGNATURE_METHOD = 'method_name'
+
+
+class ModelFormatError(Exception):
+    """Format error while trying to parse model"""
+    def __init__(self, msg, fmt):
+        """Set error message and parsed format
+
+            Args:
+                msg: Error message
+                fmt: Actual format as found in the model
+        """
+        super().__init__(msg)
+        self.message = msg
+        self.format = fmt
+        self.input_path = ''
+        self.output_path = ''
 
 
 # this class exists as a way to ensure valid mappings without having check
@@ -250,6 +268,10 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
     if ARTIFACT_MODEL_TOPOLOGY_KEY not in model_json:
         raise ValueError(
             f"model_json is missing key '{ARTIFACT_MODEL_TOPOLOGY_KEY}'")
+    model_format = model_json[FORMAT_KEY] if FORMAT_KEY in model_json else ''
+    if model_format != TFJS_GRAPH_MODEL_FORMAT:
+        raise ModelFormatError(f"unsupported model format: '{model_format}'",
+                               model_format)
 
     topology = model_json[ARTIFACT_MODEL_TOPOLOGY_KEY]
 
