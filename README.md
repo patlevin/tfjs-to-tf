@@ -154,4 +154,18 @@ or use the advanced functionality to combine several TFJS models into a single
 The latter is only supported using the API (it's just a single function call,
 though, so don't panic 😉)
 
+## Important Note
+
+By default, Python code that includes the library will see CUDA devices
+disabled (i.e. not visible in the program). This is done because the library
+uses some low-level APIs that don't allow disabling GPUs from Python code.
+Unfortunately some GPUs support CUDA but don't have the compute capabilities or
+VRAM required to convert certain models. For this reason, CUDA devices are
+disabled by default and the converter and scripts using it use CPUs only.
+
+This behaviour can now be disabled by calling `enable_cuda()` **before** any
+Tensorflow or converter function is called. This will re-enable the use of
+CUDA-capable devices, but may result in errors during model
+loading/conversion depending on the installed GPU hardware.
+
 [API Documentation](./docs/modules.rst)

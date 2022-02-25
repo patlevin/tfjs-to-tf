@@ -26,6 +26,67 @@ Type          Description
               proto.
 ============= ==========================================================
 
+``enable_cuda``
+^^^^^^^^^^^^^^^^
+
+.. code:: python
+
+  enable_cuda() -> None
+
+Enables CUDA support for the program.
+
+..
+
+    **Arguments:**
+
+..
+
+    **Returns:**
+
+..
+
+    **Details:**
+
+By default, including the library will disable CUDA devices from being used.
+This is done to enable the converter to process models that would otherwise
+cause problems with certain CUDA-enabled devices due to lack of compute
+capabilities or GPU memory constraints.
+
+Since the library uses low-level Tensorflow APIs where device usage cannot 
+be controlled from Python code, CUDA devices are disabled for the entire
+process (script).
+
+If your program requires CUDA support and includes this library, you can call
+this function **before** any call to either Tensorflow or tfjs_graph_converter
+functions.
+
+..
+
+    **Example:**
+
+.. code:: python
+
+    import sys
+    from typing import List
+    import tfjs_graph_converter.api as tfjs
+
+
+    def main(args: List[str]) -> None:
+        if '--enable-cuda' in args:
+            # enable use of CUDA-capable devices
+            tfjs.enable_cuda()
+        graph = tfjs.load_graph_model('model-dir')
+        model = tfjs.graph_def_to_function_v2(graph)
+        inputs = ...
+        # inference runs on CUDA-device if available and enabled
+        result = model(inputs)
+        # tf functions and libraries will be able to use GPUs if enabled
+
+
+    if __name__ == '__main__':
+        main(sys.argv)
+
+
 ``load_graph_model``
 ^^^^^^^^^^^^^^^^^^^^
 
