@@ -294,6 +294,39 @@ def _convert_graph_model_to_graph(model_json: Dict[str, Any],
     return _set_signature_dtypes(graph, signature_def)
 
 
+def enable_cuda():
+    """
+    Call this function *BEFORE* any tensorflow or tfjs_graph_converter function
+    to (re-)enable CUDA devices.
+
+    By default, CUDA devices are disabled when using tfjs_graph_converter to
+    ensure successful model conversion regardless of GPU capabilities and
+    avaiable GPU memory.
+
+    If you need to use CUDA devices and tfjs_graph_converter simultaneously,
+    call this function right after importing tfjs_graph_converter:
+
+    ```
+    import tfjs_graph_converter as tfjs
+    import tensorflow as tf
+    tfjs.api.enable_cuda()
+
+
+    def main() -> None:
+        graph = tfjs.api.load_graph_model('models/tfjs_model')
+        model = tfjs.api.graph_to_function_v2(graph)
+        model_input = ...
+        # inference will run on the GPU if available
+        result = model(model_input)
+        ...
+
+    if __name__ == '__main__'
+        main()
+    ```
+    """
+    os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
+
 def load_graph_model_and_signature(model_dir: str,
                                    compat_mode: bool = False
                                    ) -> Tuple[tf.Graph, util.SignatureDef]:
