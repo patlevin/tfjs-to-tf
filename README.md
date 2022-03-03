@@ -27,8 +27,8 @@ very project).
 
 ## Compatibility
 
-The converter has been tested with tensorflowjs v1.7.2/v2.0.1 and tensorflow v2.1/v2.3.
-The Python version used was Python 3.7.7.
+The converter has been tested with tensorflowjs v3.13.0, tensorflow v2.8.0
+and Python 3.9.10.
 
 ## Installation
 
