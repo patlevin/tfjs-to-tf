@@ -301,7 +301,7 @@ def enable_cuda():
 
     By default, CUDA devices are disabled when using tfjs_graph_converter to
     ensure successful model conversion regardless of GPU capabilities and
-    avaiable GPU memory.
+    available GPU memory.
 
     If you need to use CUDA devices and tfjs_graph_converter simultaneously,
     call this function right after importing tfjs_graph_converter:
