@@ -106,7 +106,7 @@ class ApiTest(unittest.TestCase):
         # sanity check; fails if model is different from the one we expected:
         # we want a model that predicts whether a point (px,py,pz) is inside
         # a sphere at (cx,cy,cz) of radius r
-        self.assertGreater(y_from_original_model, 0.8)
+        self.assertGreater(y_from_original_model, 0.7)
         # actual test
         self.assertAlmostEqual(y_from_loaded_model, y_from_original_model,
                                places=4)
