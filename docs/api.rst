@@ -11,20 +11,30 @@ directly to your Tensorflow programs, or to create your own converters.
 ``Types``
 ^^^^^^^^^
 
-============= ==========================================================
-Type          Description
-============= ==========================================================
-**GraphDef**  This type is the Tensorflow protobuf message for frozen
-              graphs. It is used as input for functions like
-              `graph_def_to_graph_v1`_.
-------------- ----------------------------------------------------------
-**Tensor**    Alias for ``numpy.ndarray``.
-------------- ----------------------------------------------------------
-**RenameMap** Class for mapping model inputs and -outputs to new names.
-              Pass string dictionaries to the constructor and use its
-              ``apply()``-method to rename node in a model's ``GraphDef``
-              proto.
-============= ==========================================================
+============== ==========================================================
+Type           Description
+============== ==========================================================
+**GraphDef**   This type is the Tensorflow protobuf message for frozen
+               graphs. It is used as input for functions like
+               `graph_def_to_graph_v1`_.
+-------------- ----------------------------------------------------------
+**Tensor**     Alias for ``numpy.ndarray``.
+-------------- ----------------------------------------------------------
+**RenameMap**  Class for mapping model inputs and -outputs to new names.
+               Pass string dictionaries to the constructor and use its
+               ``apply()``-method to rename node in a model's ``GraphDef``
+               proto.
+-------------- ----------------------------------------------------------
+**CompatMode** Enum that describes the compatibility mode for model
+               conversion:
+
+               NONE: use the full set of TF operations and optimisations
+
+               TFJS: use harmonised data types for compatibility with
+               older TFJS versions
+
+               TFLITE: only use TFLite compatible ops
+============== ==========================================================
 
 ``enable_cuda``
 ^^^^^^^^^^^^^^^^
@@ -163,7 +173,7 @@ __ https://www.tensorflow.org/api_docs/python/tf/Graph
 
    load_graph_model_and_signature(
         model_dir: str,
-        compat_mode: bool = False
+        compat_mode: CompatMode = CompatMode.NONE
    ) -> Tuple[tf.Graph, Optional[SignatureDef]]
 
 Loads a tensorflowjs graph model from a directory and returns a TF v1
@@ -181,8 +191,14 @@ that contains the inputs and outputs of the model.
     same directory as the model file.
 
 **compat_mode**
-    Set this argument to ``True`` to ensure that the resulting graph is
-    compatible with TensorflowJS if possible.
+    Set this argument to the requested mode to ensure that the resulting graph
+    is compatible with TensorflowJS or TFLite if possible.
+
+    CompatMode.NONE: the resulting model uses the full set of TF ops
+
+    CompatMode.TFJS: the resulting model uses TFJS-compatible data types
+
+    CompatMode.TFJS: the resulting model uses TFLite builtin ops only
 
 ..
 
@@ -349,7 +365,7 @@ input tensors as arguments and returns a list of model outputs as tensors.
    graph_model_to_frozen_graph(
         model_dir: str,
         export_path: str,
-        compat_mode: bool = False
+        compat_mode: CompatMode = CompatMode.NONE
    ) -> str
 
 Converts a tensorflowjs graph model to a tensorflow frozen graph.
@@ -371,8 +387,14 @@ The resulting graph is written to a **binary** protobuf message.
     must exist.
 
 **compat_mode**
-    Set this argument to ``True`` to ensure that the resulting graph is
-    compatible with TensorflowJS if possible.
+    Set this argument to the requested mode to ensure that the resulting graph
+    is compatible with TensorflowJS or TFLite if possible.
+
+    CompatMode.NONE: the resulting model uses the full set of TF ops
+
+    CompatMode.TFJS: the resulting model uses TFJS-compatible data types
+
+    CompatMode.TFJS: the resulting model uses TFLite builtin ops only
 
 ..
 
@@ -394,6 +416,7 @@ written.
         '~/some-website/saved_model_stylelize_js/',
         '~/models/stylize.pb')
 
+
 ``graph_model_to_saved_model``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -405,7 +428,7 @@ written.
         tags: Union[str, List[str]] = None,
         signature_def_map: dict = None,
         signature_key_map: RenameMap = None,
-        compat_mode: bool = False
+        compat_mode: CompatMode = CompatMode.NONE
    ) -> str
 
 Converts a tensorflowjs graph model to a tensorflow `SavedModel`__
@@ -453,8 +476,14 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
     `RenameMap`_.
 
 **compat_mode**
-    Set this argument to ``True`` to ensure that the resulting graph is
-    compatible with TensorflowJS if possible.
+    Set this argument to the requested mode to ensure that the resulting graph
+    is compatible with TensorflowJS or TFLite if possible.
+
+    CompatMode.NONE: the resulting model uses the full set of TF ops
+
+    CompatMode.TFJS: the resulting model uses TFJS-compatible data types
+
+    CompatMode.TFJS: the resulting model uses TFLite builtin ops only
 
 ..
 
@@ -516,8 +545,9 @@ multi-head model):
         export_dir: str,
         signatures: dict = None,
         signature_keys: Dict[str, RenameMap] = None,
-        compat_mode: bool = False
+        compat_mode: CompatMode = CompatMode.NONE
     ) -> str
+
 
 This function merges several tensorflowjs graph models into a single
 `SavedModel`. Separate models are identified by different tags (see `documentation`__).
@@ -556,8 +586,14 @@ __ https://github.com/tensorflow/tensorflow/blob/master/tensorflow/python/saved_
     inputs and outputs.
 
 **compat_mode**
-    Set this argument to ``True`` to ensure that the resulting graph is
-    compatible with TensorflowJS if possible.
+    Set this argument to the requested mode to ensure that the resulting graph
+    is compatible with TensorflowJS or TFLite if possible.
+
+    CompatMode.NONE: the resulting model uses the full set of TF ops
+
+    CompatMode.TFJS: the resulting model uses TFJS-compatible data types
+
+    CompatMode.TFJS: the resulting model uses TFLite builtin ops only
 
 ..
 
