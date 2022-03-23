@@ -334,6 +334,53 @@ class GraphRewriteUtilTest(unittest.TestCase):
             '"transpose_a":{"b":false}}}')
         self.assertTrue(rewrite.is_fused_op(fused_matmul, 'MatMul', b'Prelu'))
 
+    def test_is_fused_op_without_activation(self):
+        """is_fused_op should return True if op is fused with BiasAdd only
+            and no activation function is given
+        """
+        fused_matmul = testutils.node_proto_from_json(
+            '{"name":"model/output/BiasAdd","op":"_FusedMatMul",'
+            '"input":["model/dense/BiasAdd",'
+            '"model/output/MatMul/ReadVariableOp",'
+            '"model/output/BiasAdd/ReadVariableOp"],"device":"/device:CPU:0",'
+            '"attr":{"transpose_b":{"b":false},"T":{"type":"DT_FLOAT"},'
+            '"num_args":{"i": "1"},"epsilon":{"f": 0},'
+            '"fused_ops":{"list":{"s":["Qmlhc0FkZA=="]}},'
+            '"transpose_a":{"b":false}}}')
+        self.assertTrue(
+            rewrite.is_fused_op(fused_matmul, 'MatMul', activation=''))
+        fused_conv2d = testutils.node_proto_from_json(
+            '{"name":"/model/batch_normalization_v1_8/FusedBatchNormV3",'
+            '"op":"_FusedConv2D",'
+            '"input":["model/depthwise","model/weights","model/bn_offset"],'
+            '"device":"/device:CPU:0",'
+            '"attr":{"fused_ops":{"list":{"s":["Qmlhc0FkZA=="]}},'
+            '"dilations":{"list":{"i":["1","1","1","1"]}},'
+            '"T":{"type": "DT_FLOAT"},'
+            '"strides":{"list":{"i": ["1","1","1","1"]}},'
+            '"data_format":{"s":"TkhXQw=="},'
+            '"explicit_paddings":{"list":{}},'
+            '"num_args":{"i":"1"},'
+            '"epsilon":{"f":0},'
+            '"padding":{"s":"VkFMSUQ="}}}')
+        self.assertTrue(rewrite.is_fused_op(
+            fused_conv2d, 'Conv2D', activation=None))
+
+    def test_is_fused_op_with_any_activation(self):
+        """is_fused_op should be true if op is fused with BiasAdd+Activation
+           and no specific activation function is given
+        """
+        fused_matmul = testutils.node_proto_from_json(
+            '{"name":"model/dense/BiasAdd","op":"_FusedMatMul",'
+            '"input":["model/flatten/Reshape",'
+            '"model/dense/MatMul/ReadVariableOp",'
+            '"model/dense/BiasAdd/ReadVariableOp","model/p_re_lu_2/Neg"],'
+            '"device":"/device:CPU:0","attr":{"transpose_b":{"b":false},'
+            '"T":{"type":"DT_FLOAT"},"num_args":{"i":"2"},"epsilon":{"f":0},'
+            '"fused_ops":{"list":{"s":["Qmlhc0FkZA==","UHJlbHU="]}},'
+            '"transpose_a":{"b":false}}}')
+        self.assertTrue(rewrite.is_fused_op(fused_matmul, 'MatMul', ''))
+
     def test_validate_supported_ops_given_valid_graph(self):
         """validate_supported_ops should accept valid graph_def"""
         graph_def = testutils.get_sample_graph_def()
