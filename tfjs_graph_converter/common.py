@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2020 Patrick Levin
 # ==============================================================================
-"""Commonly used constants"""
+"""Commonly used constants and -types"""
+
+from enum import Enum
+
 
 # Keys in the model.json file
 TFJS_NODE_KEY = 'node'
@@ -38,3 +41,15 @@ CLI_SIGNATURE_KEY = 'signature_key'
 CLI_METHOD_NAME = 'method_name'
 CLI_RENAME = 'rename'
 CLI_COMPATIBLE = 'compat_mode'
+
+
+class CompatMode(Enum):
+    """Compatibility modes for converting models:
+
+        NONE: use full optimisation and all TF ops
+        TFJS: use harmonised data types for TFJS <2.4.x compatibility
+        TFLITE: output model using TFLite builtins only (i.e. no fused ops)
+    """
+    NONE = 1
+    TFJS = 2
+    TFLITE = 3
