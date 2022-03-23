@@ -27,6 +27,7 @@ WeightTransform = Callable[[Tensor], Tensor]
 WeightModifiers = Dict[Text, WeightTransform]
 NodeTransform = Callable[[NodeDef, NameToNode, WeightModifiers], NodeList]
 TensorDict = Dict[str, TfTensor]
+MaybeText = Optional[Text]
 
 
 def get_op_def(op_name: Text) -> Optional[OpDef]:
@@ -284,33 +285,39 @@ def generate_name_from(base_name: Text,
     return target_name
 
 
-def is_fused_op(node: NodeDef, op_name: Text, activation: Text) -> bool:
+def is_fused_op(node: NodeDef, op_name: Text, activation: MaybeText) -> bool:
     """
     Return whether a node represents a fused TF operation.
 
     Args:
         node: Node defintion
         op_name: Fused operation name (e.g. 'MatMul')
-        activation: Name of the fused activation function (e.g. 'Relu')
+        activation: Optional name of the fused activation function
+                    (e.g. 'Relu')
 
     Returns:
         `True`, iff the node is a fused operation with the given activation
     """
     if node.op == f'_Fused{op_name}' and 'fused_ops' in node.attr:
         fused_ops = node.attr['fused_ops'].list.s
-        return (len(fused_ops) == 2
-                and fused_ops[0] in (b'BiasAdd', b'BiasAddV1')
-                and fused_ops[1] == activation)
+        if not fused_ops:
+            return False
+        if fused_ops[0] not in (b'BiasAdd', b'BiasAddV1'):
+            return False
+        if activation:
+            return len(fused_ops) == 2 and fused_ops[1] == activation
+        else:
+            return True
     return False
 
 
-def is_fused_conv2d(node: NodeDef, activation: Text) -> bool:
+def is_fused_conv2d(node: NodeDef, activation: MaybeText = None) -> bool:
     """Return whether a node is a fused conv2d operation with given activation
     """
     return is_fused_op(node, 'Conv2D', activation)
 
 
-def is_fused_matmul(node: NodeDef, activation: Text) -> bool:
+def is_fused_matmul(node: NodeDef, activation: MaybeText = None) -> bool:
     """Return whether a node is a fused matmul operation with given activation
     """
     return is_fused_op(node, 'MatMul', activation)
