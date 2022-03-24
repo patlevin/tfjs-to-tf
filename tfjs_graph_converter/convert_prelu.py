@@ -48,8 +48,11 @@ def _split_fused_op(node: util.NodeDef,
 
     have_activation = len(fused_ops) > 1
     if have_activation:
+        # Prelu activation has additional input; reuse original name in all
+        # cases
+        name = node_name(3) if len(inputs) > 3 else node.name
         activation = util.make_op_node(fused_ops[1], [bias_add] + inputs[3:],
-                                       node_name(3))
+                                       name)
         return [fused_op, bias_add, activation]
     else:
         return [fused_op, bias_add]
