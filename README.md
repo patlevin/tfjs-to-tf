@@ -55,9 +55,23 @@ for quick and easy model conversion.
 | `-h`, `--help` | Show help message and exit |
 | `--output_format` | Use `tf_frozen_model` (the default) to save a Tensorflow frozen model. `tf_saved_model` exports to a Tensorflow _SavedModel_ instead. |
 | `--saved_model_tags` | Specifies the tags of the MetaGraphDef to save, in comma separated string format. Defaults to "serve". Applicable only if `--output_format` is `tf_saved_model` |
-| `-c`, `--compat_mode` | Keep the input types compatible with TensorflowJS <=2.4.x |
+| `-c`, `--compat_mode` | Sets a compatibility mode forthe coverted model (see below) |
 | `-v`, `--version` | Shows the version of the converter and its dependencies. |
 | `-s`, `--silent` | Suppresses any output besides error messages. |
+
+### Compatibility Modes
+
+Models are converted to optmimised native Tensorflow operators by default.
+This can cause problems if the converted model is subseuently converted to
+another format (ONNX, TFLite, older TFJS versions, etc.) The `--compat_mode`
+option can be used to avoid incompatible native operations such as fused
+convolutions. Available options are:
+
+| Option   | Description |
+| :---     | :---        |
+| `--compat_mode=none`   | Use all available optimisations and native TF operators      |
+| `--compat_mode=tfjs`   | Avoid weights that are incompatible with older TFJS versions |
+| `--compat_mode=tflite` | Only use TFLite builtins for the converted model             |
 
 ### Advanced Options
 
@@ -68,7 +82,7 @@ These options are intended for advanced users who are familiar with the details 
 | `--outputs` | Specifies the outputs of the MetaGraphDef to save, in comma separated string format. Applicable only if `--output_format` is `tf_saved_model` | --outputs=Identity |
 | `--signature_key` | Specifies the key for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. | --signature_key=serving_autoencode |
 | `--method_name` | Specifies the method name for the signature of the MetraGraphDef. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. | --method_name=tensorflow/serving/classify |
-| `--rename` | Specifies a key mapping to change the keys of outputs and inputs in the signature. The format is comma-separated pairs of *old name:new name*. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. | --rename Identity:scores,model/dense256/BiasAdd:confidence |
+| `--rename` | Specifies a key mapping to change the keys of outputs and inputs in the signature. The format is comma-separated pairs of _old name:new name_. Applicable only if `--output_format` is `tf_saved_model`. Requires `--outputs` to be set. | --rename Identity:scores,model/dense256/BiasAdd:confidence |
 
 Specifying ``--outputs`` can be useful for multi-head models to select the default
 output for the main signature. The CLI only handles the default signature of
@@ -77,7 +91,7 @@ the model. Multiple signatures can be created using the [API](https://github.com
 The method name must be handled with care, since setting the wrong value might
 prevent the signature from being valid for use with TensorFlow Serving.
 The option is available, because the converter only generates
-*predict*-signatures. In case the model is a regression model or a classifier
+_predict_-signatures. In case the model is a regression model or a classifier
 with the matching outputs, the correct method name can be forced using the
 ``--method_name`` option.
 
@@ -105,8 +119,8 @@ model, which is a multi-head model.
 We want to select only two of the four possible outputs and rename them in the
 model's signature, as follows:
 
-* Input: *input* (from *sub_2*)
-* Outputs: *offsets* and *heatmaps* (from *float_short_offsets* and *float_heatmaps*)
+* Input: _input_ (from _sub_2_)
+* Outputs: _offsets_ and _heatmaps_ (from _float_short_offsets_ and _float_heatmaps_)
 
 ```sh
 tfjs_graph_converter \

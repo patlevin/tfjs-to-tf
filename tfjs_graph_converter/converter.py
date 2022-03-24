@@ -66,11 +66,13 @@ def get_arg_parser():
         help=f'Output format. Default: "{common.CLI_FROZEN_MODEL}".'
     )
     parser.add_argument(
-        '--' + common.CLI_COMPATIBLE,
+        '--' + common.CLI_COMPATMODE,
         '-c',
         dest='compat_mode',
-        action='store_true',
-        help='Keep the input types compatible with TFJS <=2.4.x'
+        type=common.CompatMode.argparse,
+        default=common.CompatMode.NONE,
+        choices=list(common.CompatMode),
+        help='Compatibility mode for the converted model'
     )
     group = parser.add_argument_group(f'{common.CLI_SAVED_MODEL} specific',
                                       'Arguments that apply to SavedModel '
