@@ -67,11 +67,11 @@ another format (ONNX, TFLite, older TFJS versions, etc.) The `--compat_mode`
 option can be used to avoid incompatible native operations such as fused
 convolutions. Available options are:
 
-| Option   | Description |
+| Mode     | Description |
 | :---     | :---        |
-| `--compat_mode=none`   | Use all available optimisations and native TF operators      |
-| `--compat_mode=tfjs`   | Avoid weights that are incompatible with older TFJS versions |
-| `--compat_mode=tflite` | Only use TFLite builtins for the converted model             |
+| `none`   | Use all available optimisations and native TF operators |
+| `tfjs`   | Harmonise input types for compatibility with older TFJS versions |
+| `tflite` | Only use TFLite builtins in the converted model |
 
 ### Advanced Options
 
