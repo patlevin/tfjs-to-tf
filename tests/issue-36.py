@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Copyright © 2022 Patrick Levin
 """This script validates TFLite compatibility.
 
 The script is used to replicate Github Issue #36
