@@ -3,7 +3,8 @@
 # ==============================================================================
 """Commonly used constants and -types"""
 
-from enum import Enum
+from enum import IntEnum
+from typing import Union
 
 
 # Keys in the model.json file
@@ -40,16 +41,30 @@ CLI_OUTPUTS = 'outputs'
 CLI_SIGNATURE_KEY = 'signature_key'
 CLI_METHOD_NAME = 'method_name'
 CLI_RENAME = 'rename'
-CLI_COMPATIBLE = 'compat_mode'
+CLI_COMPATMODE = 'compat_mode'
 
 
-class CompatMode(Enum):
+class CompatMode(IntEnum):
     """Compatibility modes for converting models:
 
         NONE: use full optimisation and all TF ops
         TFJS: use harmonised data types for TFJS <2.4.x compatibility
         TFLITE: output model using TFLite builtins only (i.e. no fused ops)
     """
-    NONE = 1
-    TFJS = 2
-    TFLITE = 3
+    NONE = 0
+    TFJS = 1
+    TFLITE = 2
+
+    # argparse compatibility functions
+    def __str__(self) -> str:
+        return self.name.lower()
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    @staticmethod
+    def argparse(s: str) -> Union[str, 'CompatMode']:
+        try:
+            return CompatMode[s.upper()]
+        except KeyError:
+            return s
