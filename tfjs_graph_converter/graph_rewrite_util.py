@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright © 2020 Patrick Levin
 """Utility functions for rewriting TensorFow Graphs"""
-
+from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Text, Tuple, Union
 
 from tensorflow import as_dtype, cast as tensor_cast, Tensor as TfTensor
@@ -162,20 +162,30 @@ def update_graph_def(input_graph_def: GraphDef,
         unchanged.
     """
     result_graph_def = GraphDef()
+    replace_inputs = partial(_replace_input_nodes, inputs_to_replace)
     for node in input_graph_def.node:
         if node.name in nodes_to_remap:
             nodes_to_insert = nodes_to_remap[node.name]
-            if nodes_to_insert and len(nodes_to_insert) > 0:
+            if nodes_to_insert:
+                _ = list(map(replace_inputs, nodes_to_insert))
                 result_graph_def.node.extend(nodes_to_insert)
             continue
         new_node = NodeDef()
         new_node.CopyFrom(node)
-        for i, input_node in enumerate(new_node.input):
-            if input_node in inputs_to_replace:
-                new_node.input[i] = inputs_to_replace[input_node]
+        _replace_input_nodes(inputs_to_replace, new_node)
         result_graph_def.node.extend([new_node])
     result_graph_def.versions.CopyFrom(input_graph_def.versions)
     return result_graph_def
+
+
+def _replace_input_nodes(
+    inputs_to_replace: Dict[Text, Text],
+    new_node: NodeDef
+) -> None:
+    """Replace inputs with new names"""
+    for i, input_node in enumerate(new_node.input):
+        if input_node in inputs_to_replace:
+            new_node.input[i] = inputs_to_replace[input_node]
 
 
 def get_input_node_map(input_graph_def: GraphDef) -> NameToNode:
