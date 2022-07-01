@@ -1,6 +1,6 @@
 # TensorFlow.js Graph Model Converter
 
-![TFJS Graph Converter Logo](/docs/logo.png)
+![TFJS Graph Converter Logo](https://github.com/patlevin/tfjs-to-tf/raw/master/docs/logo.png)
 
 The purpose of this library is to import TFJS graph models into Tensorflow.
 This allows you to use TensorFlow.js models with Python in case you don't
