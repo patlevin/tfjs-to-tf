@@ -38,7 +38,7 @@ def get_inputs(graph_def: GraphDef) -> List[NodeDef]:
 def get_outputs(graph_def: GraphDef) -> List[NodeDef]:
     """Return all output nodes from a graph"""
     def is_op_node(node):
-        return node.op not in ('Const', 'Placeholder')
+        return node.op not in ('Const', 'Placeholder', 'NoOp')
     nodes = [node for node in graph_def.node if is_op_node(node)]
 
     def has_ref(node):

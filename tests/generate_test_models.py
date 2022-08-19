@@ -18,6 +18,7 @@ from tensorflow.keras.preprocessing import image_dataset_from_directory
 from tensorflow.keras.layers.experimental.preprocessing import Rescaling
 from google.protobuf.json_format import MessageToJson
 from tensorflowjs.converters.converter import convert as convert_to_tfjs
+from tests.testutils import KERAS_MODEL_FILE_NAME
 from tfjs_graph_converter.optimization import optimize_graph
 
 from testutils import GraphDef, model_to_graph, get_outputs
@@ -242,6 +243,18 @@ def save_keras_model(model: Callable, path: str) -> None:
     ])
 
 
+def save_layer_model(path: str) -> None:
+    """Save empty TFJS layer model"""
+    MODEL = (
+        '{"modelTopology":{"class_name":"Sequential","config":[],' +
+        '"keras_version":"tfjs-layers 1.1.2","backend":"tensor_flow.js"' +
+        '},"format":"layers-model","generatedBy":null,"convertedBy":null,' +
+        '"weightsManifest":[]}'
+    )
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(MODEL)
+
+
 if __name__ == '__main__':
     print('Generating multi-layer sample model...')
     model = deepmind_atari_net(10, input_shape=(128, 128, 3))
@@ -261,3 +274,5 @@ if __name__ == '__main__':
     print('Generating depthwise conv2d model with PReLU activation...')
     model = depthwise_model('prelu')
     save_tfjs_model(model, get_path_to(DEPTHWISE_PRELU_PATH))
+    print('Writing Keras layer model')
+    save_layer_model(get_path_to(KERAS_MODEL_FILE_NAME))
