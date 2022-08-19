@@ -7,7 +7,6 @@ name = "tfjs-graph-converter"
 authors = [
     {name = "Patrick Levin", email = "vertical-pink@protonmail.com"}
 ]
-urls = { homepage = "https://github.com/patlevin/tfjs-to-tf/" }
 description = "A tensorflowjs Graph Model Converter"
 readme = "README.md"
 requires-python = ">=3.6"
@@ -30,6 +29,11 @@ dependencies = [
     "tensorflowjs>=1.5.2"
 ]
 dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/patlevin/tfjs-to-tf/"
+repository = "https://github.com/patlevin/tfjs-to-tf/"
+documentation = "https://github.com/patlevin/tfjs-to-tf/blob/master/docs/modules.rst"
 
 [project.scripts]
 tfjs_graph_converter = "tfjs_graph_converter.converter:pip_main"
