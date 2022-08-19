@@ -199,7 +199,7 @@ class GraphRewriteUtilTest(unittest.TestCase):
         graph_def = testutils.get_sample_graph_def()
 
         def _is_prelu(node): return node.op == 'Prelu'
-        def _remove_node(node, map, mods): return []
+        def _remove_node(): return []
         updated_graph_def, modifiers = rewrite.replace_matching_nodes(
             graph_def, predicate=_is_prelu, transform=_remove_node
         )
@@ -210,26 +210,23 @@ class GraphRewriteUtilTest(unittest.TestCase):
         new_name_of_replaced_node = ''
         def _must_replace(node): return node.name == name_of_node_to_replace
 
-        def _convert_to_log_sigmoid(node, input_map, modifiers):
+        def _convert_to_log_sigmoid(node, *_):
             """replace Relu with logarithmic sigmoid 1/(1+exp(-x))"""
-            def _get_name(suffix):
-                return rewrite.generate_name_from(node.name, input_map,
-                                                  f'logSigmoid/{suffix}')
             nonlocal new_name_of_replaced_node
             # -x
             neg = rewrite.make_op_node('Neg', list(node.input),
-                                       name=_get_name('Neg'))
+                                       name=f'{node.name}/Neg')
             # exp(-x)
-            exp = rewrite.make_op_node('Exp', neg, name=_get_name('Exp'))
+            exp = rewrite.make_op_node('Exp', neg, name=f'{node.name}/Exp')
             # constant tensor holding "1"
             res = rewrite.make_const_node(np.array([1], dtype=np.float32),
-                                          name=_get_name('Var/resource'))
+                                          name=f'{node.name}/Var/resource')
             # variable holding "1"
-            one = rewrite.make_op_node('Identity', res, _get_name('Var'))
+            one = rewrite.make_op_node('Identity', res, f'{node.name}/Var')
             # 1+exp(-x)
-            add = rewrite.make_op_node('Add', [one, exp], _get_name('Add'))
+            add = rewrite.make_op_node('Add', [one, exp], f'{node.name}/Add')
             # 1/(1+exp-x)
-            inv = rewrite.make_op_node('Inv', add, _get_name('Inv'))
+            inv = rewrite.make_op_node('Inv', add, f'{node.name}/Inv')
             new_name_of_replaced_node = inv.name    # remember the output name
             return [neg, exp, res, one, add, inv]
 
@@ -256,59 +253,6 @@ class GraphRewriteUtilTest(unittest.TestCase):
         for node_name in replaced_references:
             node = updated_nodes[node_name]
             self.assertIn(new_name_of_replaced_node, node.input)
-
-    def test_generate_name_from_given_unique_name(self):
-        """generate_name_from should return base name if name is unique"""
-        # case #1: no slashes in name, name is unique -> return as-is
-        node_map = {}
-        base_name = 'name_without_slahes'
-        name = rewrite.generate_name_from(base_name, node_map)
-        self.assertEqual(name, base_name)
-        # case #2: no slashes in name, name in map, name + suffix unique
-        node_map[base_name] = rewrite.make_op_node('Neg', 'x', name=base_name)
-        suffix = 'uniq'
-        name = rewrite.generate_name_from(base_name, node_map, suffix=suffix)
-        self.assertEqual(name, f'{base_name}/{suffix}')
-        # case #3: slashes in name, name with slashes in map -> return 1st part
-        base_name = 'name/suffix'
-        node_map[base_name] = rewrite.make_op_node('Neg', 'y', name=base_name)
-        name = rewrite.generate_name_from(base_name, node_map)
-        self.assertEqual(name, 'name')
-        # case #4: slashes in name, name in map, name + suffix unique
-        base_name = 'name/suffix/op'
-        name = rewrite.generate_name_from(base_name, node_map, suffix='uniq')
-        self.assertEqual(name, 'name/suffix/uniq')
-
-    def test_generate_name_from_given_duplicate_name(self):
-        """generate_name_from should return new name if base name is taken"""
-        node_map = {}
-        # case #1: name without slashes -> return name + count
-        base_name = 'name_without_slashes'
-        node_map[base_name] = rewrite.make_op_node('Neg', 'x', name='_')
-        name = rewrite.generate_name_from(base_name, node_map)
-        self.assertEqual(name, base_name+'_1')
-        # case #2: count needs to increment
-        node_map[name] = rewrite.make_op_node('Neg', 'y', name='_')
-        name = rewrite.generate_name_from(base_name, node_map)
-        self.assertEqual(name, base_name+'_2')
-        # case #3: name + suffix -> return name + suffix + count
-        suffix = 'suffix'
-        node_map[base_name+'/'+suffix] = rewrite.make_op_node('Inv', 'x',
-                                                              name='_')
-        name = rewrite.generate_name_from(base_name, node_map, suffix=suffix)
-        self.assertEqual(name, f'{base_name}/{suffix}_1')
-        # case #4: count needs to increment
-        node_map[name] = rewrite.make_op_node('Inv', 'y', name='_')
-        name = rewrite.generate_name_from(base_name, node_map, suffix=suffix)
-        self.assertEqual(name, f'{base_name}/{suffix}_2')
-        # case #5: slashes in name, name in map -> return name + count
-        base_name = 'name_without_slashes/suffix'
-        name = rewrite.generate_name_from(base_name, node_map)
-        self.assertEqual(name, 'name_without_slashes_2')
-        # case #6: slashes in name, name + suffix in map -> name+suffix+count
-        base_name = 'name_without_slashes/suffix'
-        name = rewrite.generate_name_from(base_name, node_map, suffix=suffix)
-        self.assertEqual(name, f'{base_name}_2')
 
     def test_is_fused_op(self):
         """is_fused_op should be true if op is fused with BiasAdd+Activation"""

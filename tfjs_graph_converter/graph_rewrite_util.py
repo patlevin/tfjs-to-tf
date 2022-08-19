@@ -2,7 +2,8 @@
 # Copyright © 2020 Patrick Levin
 """Utility functions for rewriting TensorFow Graphs"""
 from functools import partial
-from typing import Any, Callable, Dict, List, Optional, Text, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Text, Tuple
+from typing import Union
 
 from tensorflow import as_dtype, cast as tensor_cast, Tensor as TfTensor
 from tensorflow.core.framework.attr_value_pb2 import AttrValue
@@ -249,7 +250,7 @@ def replace_matching_nodes(input_graph_def: GraphDef,
             del input_node_map[node.name]
             new_nodes = transform(node, input_node_map, weight_modifiers)
             nodes_to_remap[node.name] = new_nodes
-            if new_nodes and len(new_nodes) > 0:
+            if new_nodes:
                 # by convention, the output of the last node in the returned
                 # sub-graph replaces the output of the original node
                 inputs_to_remap[node.name] = new_nodes[-1].name
@@ -259,40 +260,6 @@ def replace_matching_nodes(input_graph_def: GraphDef,
     output_graph_def = update_graph_def(input_graph_def, nodes_to_remap,
                                         inputs_to_remap)
     return output_graph_def, weight_modifiers
-
-
-def generate_name_from(base_name: Text,
-                       input_node_map: NameToNode,
-                       suffix: Optional[Text] = None) -> Text:
-    """
-    The tfjs converter generates names separated by forward slashes ('/').
-    We can get the root name of an operation node by splitting off the last
-    part (optionally with an added suffix):
-
-    prefix/model_name/node_name/layer_name -> prefix/model_name/node_name
-
-    The resulting name is then made unique with repespect to the given node
-    mapping.
-
-    Args:
-        base_name: Node name to generate the new name from
-        input_node_map: `dict` containing the names of all nodes in the graph
-        suffix: optional suffix that will replace the removed part of the
-                original name
-
-    Returns:
-        Root name of the given node name; guaranteed to be unique within the
-        graph.
-    """
-    base_name = '/'.join(base_name.split('/')[:-1]) or base_name
-    if suffix:
-        base_name = base_name + '/' + suffix
-    target_name = base_name
-    count = 0
-    while target_name in input_node_map:
-        count += 1
-        target_name = f'{base_name}_{count}'
-    return target_name
 
 
 def is_fused_op(node: NodeDef, op_name: Text, activation: MaybeText) -> bool:
