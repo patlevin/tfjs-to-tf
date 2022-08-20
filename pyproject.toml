@@ -26,7 +26,9 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "tensorflowjs>=1.5.2"
+    "tensorflow-macos>=2.3; platform_system=='Darwin'",
+    "tensorflow-metal>=2.3; platform_machine=='arm64'",
+    "tensorflowjs>=1.5.2",
 ]
 dynamic = ["version"]
 
@@ -39,7 +41,7 @@ documentation = "https://github.com/patlevin/tfjs-to-tf/blob/master/docs/modules
 tfjs_graph_converter = "tfjs_graph_converter.converter:pip_main"
 
 [project.optional-dependencies]
-test = ["pillow"]
+test = ["Pillow>=8.0.0"]
 
 [tool.setuptools]
 packages = ["tfjs_graph_converter"]
