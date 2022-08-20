@@ -98,15 +98,15 @@ class ApiTest(unittest.TestCase):
             testutils.PRELU_MODEL_FILE)
         original_model = testutils.graph_to_model(original_model_name)
         # run both models and compare results
-        cx, cy, cz, r = -0.12, 0.2, 0.1, 0.314158
-        px, py, pz = -0.4, 0.5, 0.4
+        cx, cy, cz, r = 0.2, 0.1, -0.1, 0.35
+        px, py, pz = 0.1, -0.15, 0.05
         x = tf.constant([[cx, cy, cz, r, px, py, pz]], dtype=tf.float32)
         y_from_loaded_model = as_scalar(loaded_model(x))
         y_from_original_model = as_scalar(original_model(x))
         # sanity check; fails if model is different from the one we expected:
         # we want a model that predicts whether a point (px,py,pz) is inside
         # a sphere at (cx,cy,cz) of radius r
-        self.assertGreater(y_from_original_model, 0.7)
+        self.assertGreater(y_from_original_model, 0.5)
         # actual test
         self.assertAlmostEqual(y_from_loaded_model, y_from_original_model,
                                places=4)

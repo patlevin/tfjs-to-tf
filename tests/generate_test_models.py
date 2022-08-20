@@ -18,6 +18,7 @@ from tensorflow.keras.preprocessing import image_dataset_from_directory
 from tensorflow.keras.layers.experimental.preprocessing import Rescaling
 from google.protobuf.json_format import MessageToJson
 from tensorflowjs.converters.converter import convert as convert_to_tfjs
+from tests.testutils import KERAS_MODEL_FILE_NAME
 from tfjs_graph_converter.optimization import optimize_graph
 
 from testutils import GraphDef, model_to_graph, get_outputs
@@ -85,18 +86,27 @@ def prelu_classifier_model():
                   metrics=['accuracy'])
     # generate 125 spheres of different sizes with sample 8 points per sphere,
     # half inside and half outside; use fixed rng seed for repeatability
+    def gen_point(cx, cy, cz, r):
+        u = np.random.random()
+        v = np.random.random()
+        theta = u * 2 * np.pi
+        phi = np.arccos(2 * v - 1)
+        sr = r * np.cbrt(np.random.random())
+        st, ct = np.sin(theta), np.cos(theta)
+        sp, cp = np.sin(phi), np.cos(phi)
+        return cx + sr * sp * ct, cy + sr * sp * st, cz + sr * cp
+
     data = np.ndarray(shape=(1000, 8))
-    random.seed(42)
+    np.random.seed(42)
     for s in range(125):
-        cx = random.uniform(-1, 1)
-        cy = random.uniform(-1, 1)
-        cz = random.uniform(-1, 1)
-        r = random.uniform(0.01, 0.6)
+        cx = np.random.uniform(-1, 1)
+        cy = np.random.uniform(-1, 1)
+        cz = np.random.uniform(-1, 1)
+        r = np.random.uniform(0.1, 1)
         # 4 samples inside the sphere
         for p in range(4):
-            px = cx + random.uniform(-r*0.9, r*0.9)
-            py = cy + random.uniform(-r*0.9, r*0.9)
-            pz = cz + random.uniform(-r*0.9, r*0.9)
+            px, py, pz = gen_point(cx, cy, cz, r)
+            assert (px-cx)*(px-cx) + (py-cy)*(py-cy) + (pz-cz)*(pz-cz) < r*r
             data[s*8+p] = [cx, cy, cz, r, px, py, pz, 1]
         # 4 samples outside the sphere
         for p in range(4):
@@ -104,12 +114,14 @@ def prelu_classifier_model():
             px = cx + sr * random.uniform(1.02, 1.5)
             py = cy + sr * random.uniform(1.02, 1.5)
             pz = cz + sr * random.uniform(1.02, 1.5)
+            assert (px-cx)*(px-cx) + (py-cy)*(py-cy) + (pz-cz)*(pz-cz) > r*r
             data[s*8+4+p] = [cx, cy, cz, r, px, py, pz, 0]
+
     np.random.shuffle(data)
     xs = data[:, 0:7]
     ys = data[:, 7]
     print('Training the model... ', end='', flush=True)
-    model.fit(xs, ys, epochs=250, batch_size=32, verbose=0)
+    model.fit(xs, ys, epochs=100, batch_size=32, verbose=0)
     print('done.')
     return model
 
@@ -187,9 +199,9 @@ def depthwise_model(activation: str = 'relu'):
         print('Loading dataset... ', end='', flush=True)
         train_ds, validate_ds = _load_hoh_dataset(tmpdirname)
         print('Ok.')
-        # train for 10 epochs - should settle at about 91% accuracy
+        # train for 15 epochs - should settle at about 91% accuracy
         print('Training the model... ', end='', flush=True)
-        model.fit(train_ds, validation_data=validate_ds, epochs=10)
+        model.fit(train_ds, validation_data=validate_ds, epochs=15)
         print('Done')
     return model
 
@@ -242,6 +254,18 @@ def save_keras_model(model: Callable, path: str) -> None:
     ])
 
 
+def save_layer_model(path: str) -> None:
+    """Save empty TFJS layer model"""
+    MODEL = (
+        '{"modelTopology":{"class_name":"Sequential","config":[],' +
+        '"keras_version":"tfjs-layers 1.1.2","backend":"tensor_flow.js"' +
+        '},"format":"layers-model","generatedBy":null,"convertedBy":null,' +
+        '"weightsManifest":[]}'
+    )
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(MODEL)
+
+
 if __name__ == '__main__':
     print('Generating multi-layer sample model...')
     model = deepmind_atari_net(10, input_shape=(128, 128, 3))
@@ -261,3 +285,5 @@ if __name__ == '__main__':
     print('Generating depthwise conv2d model with PReLU activation...')
     model = depthwise_model('prelu')
     save_tfjs_model(model, get_path_to(DEPTHWISE_PRELU_PATH))
+    print('Writing Keras layer model')
+    save_layer_model(get_path_to(KERAS_MODEL_FILE_NAME))

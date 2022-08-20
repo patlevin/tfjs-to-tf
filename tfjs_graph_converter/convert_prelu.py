@@ -3,11 +3,9 @@
 """Functions to rewrite Prelu-activations as native TensorFlow operations"""
 
 import tfjs_graph_converter.graph_rewrite_util as util
-from tfjs_graph_converter.graph_rewrite_util import generate_name_from
 
 
-def _split_fused_op(node: util.NodeDef,
-                    input_node_map: util.NameToNode, _) -> util.NodeList:
+def _split_fused_op(node: util.NodeDef, *_) -> util.NodeList:
     # Possible fused Conv2D patterns are:
     # • Conv2D + BiasAdd
     # • Conv2D + BiasAdd + <Activation>
@@ -27,39 +25,31 @@ def _split_fused_op(node: util.NodeDef,
     #
     # We return [Conv2D|MatMul, BiasAdd|BiasAddV1, <Activation>].
     # Unsupported <Activation>-nodes will be dealt with in a separate step
+
     fused_op_name = node.op[6:]     # remove the '_Fused'-prefix
     fused_ops = list(s.decode('utf-8') for s in node.attr['fused_ops'].list.s)
     inputs = list(node.input)
-    names_used = set()
 
-    def node_name(node_index):
-        name = generate_name_from(inputs[node_index], input_node_map)
-        if name in names_used:
-            name = generate_name_from(name, input_node_map,
-                                      suffix=fused_ops[node_index-2])
-        names_used.add(name)
-        return name
-
-    fused_op = util.make_op_node(fused_op_name, inputs[0:2], node_name(1))
+    fused_op = util.make_op_node(
+        fused_op_name, inputs[0:2], f'{node.name}/{fused_op_name}')
     fused_op = util.copy_op_attrs(source=node, target=fused_op)
     bias_add = util.make_op_node(fused_ops[0], [fused_op, inputs[2]],
-                                 node_name(2))
+                                 f'{node.name}/{fused_ops[0]}')
     bias_add = util.copy_op_attrs(source=node, target=bias_add)
 
     have_activation = len(fused_ops) > 1
     if have_activation:
         # Prelu activation has additional input; reuse original name in all
         # cases
-        name = node_name(3) if len(inputs) > 3 else node.name
         activation = util.make_op_node(fused_ops[1], [bias_add] + inputs[3:],
-                                       name)
+                                       f'{node.name}/{fused_ops[1]}')
         return [fused_op, bias_add, activation]
     else:
         return [fused_op, bias_add]
 
 
 def _split_prelu(node: util.NodeDef,
-                 input_node_map: util.NameToNode,
+                 _: util.NameToNode,
                  weight_modifiers: util.WeightModifiers) -> util.NodeList:
     # Prelu activation is not supported by TF so this functions generates an
     # equivalent formulation:
@@ -70,17 +60,13 @@ def _split_prelu(node: util.NodeDef,
     # [pos=Relu(x), Neg(x), Relu(-x), neg=Mul(-alpha, -x), Add(pos, neg)]
     inputs = list(node.input)
 
-    def _get_name(suffix):
-        return generate_name_from(node.name, input_node_map, suffix=suffix)
-
-    # here we need to manually keep node names unique in the sub-graph
-    # since we cannot modify input_node_map, because we don't have a node yet
-    pos = util.make_op_node('Relu', inputs[0], _get_name('Relu'))
-    neg_x = util.make_op_node('Neg', inputs[0], _get_name('Neg'))
-    neg_relu = util.make_op_node('Relu', neg_x, _get_name('Relu_1'))
+    name = node.name
+    pos = util.make_op_node('Relu', inputs[0], f'{name}/Relu')
+    neg_x = util.make_op_node('Neg', inputs[0], f'{name}/Neg')
+    neg_relu = util.make_op_node('Relu', neg_x, f'{name}/Relu_1')
     neg_alpha = inputs[1]
-    neg = util.make_op_node('Mul', [neg_alpha, neg_relu], _get_name('Mul'))
-    add = util.make_op_node('Add', [pos, neg], _get_name('Add'))
+    neg = util.make_op_node('Mul', [neg_alpha, neg_relu], f'{name}/Mul')
+    add = util.make_op_node('Add', [pos, neg], f'{name}/Add')
     # convert alpha to -alpha by registering a weight modifier function
     weight_modifiers[neg_alpha] = lambda tensor: -tensor
     return [pos, neg_x, neg_relu, neg, add]

@@ -34,7 +34,10 @@ NodeInfo = namedtuple('NodeInfo', 'name shape dtype tensor')
 
 
 def _is_op_node(node: NodeDef) -> bool:
-    return node.op not in (c.TFJS_NODE_CONST_KEY, c.TFJS_NODE_PLACEHOLDER_KEY)
+    return node.op not in (
+        c.TFJS_NODE_CONST_KEY,
+        c.TFJS_NODE_PLACEHOLDER_KEY,
+        c.TFJS_NODE_NOOP_KEY)
 
 
 def _op_nodes(graph_def: GraphDef) -> List[NodeDef]:

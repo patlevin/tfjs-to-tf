@@ -233,7 +233,7 @@ def main(argv):
     try:
         convert(argv[0].split(' '))
     except ValueError as ex:
-        msg = ex.args[0] if len(ex.args) > 0 else ex
+        msg = ex.args[0] if ex.args else ex
         print(f'Error: {msg}')
     except api.ModelFormatError as ex:
         if ex.format == tfjs.converters.common.TFJS_LAYERS_MODEL_FORMAT:

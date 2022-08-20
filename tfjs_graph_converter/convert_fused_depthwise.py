@@ -1,34 +1,21 @@
 # SPDX-License-Identifier: MIT
-# Copyright © 2020 Patrick Levin
+# Copyright © 2022 Patrick Levin
 """Functions to rewrite FusedDepthwiseConv2d as native TensorFlow operations"""
 
 import tfjs_graph_converter.graph_rewrite_util as util
-from tfjs_graph_converter.graph_rewrite_util import generate_name_from
 
 
-def _split_fused_depthwise(node: util.NodeDef, input_node_map: util.NameToNode,
-                           weight_mods: util.WeightModifiers) -> util.NodeList:
+def _split_fused_depthwise(node: util.NodeDef, *_) -> util.NodeList:
     """Decompose fused op into DepthwiseConv2dNative + BiasAdd [+ Activation]
     """
     fused_ops = list(s.decode('utf-8') for s in node.attr['fused_ops'].list.s)
     inputs = node.input
-    names_used = set()
-
-    def node_name(node_index):
-        """Return unique node names for sub-operations by appending fused-op"""
-        i = min(node_index, len(inputs)-1)  # PReLU has 4 inputs, others only 3
-        name = generate_name_from(inputs[i], input_node_map)
-        if name in names_used:
-            name = generate_name_from(name, input_node_map,
-                                      suffix=fused_ops[node_index-2])
-        names_used.add(name)
-        return name
 
     op = 'DepthwiseConv2dNative'
-    depthwise = util.make_op_node(op, inputs[0:2], node_name(1))
+    depthwise = util.make_op_node(op, inputs[0:2], f'{node.name}/conv2d')
     depthwise = util.copy_op_attrs(source=node, target=depthwise)
     op = fused_ops[0]
-    bias_add = util.make_op_node(op, [depthwise, inputs[2]], node_name(2))
+    bias_add = util.make_op_node(op, [depthwise, inputs[2]], f'{node.name}/{op}')
     bias_add = util.copy_op_attrs(source=node, target=bias_add)
     node_list = [depthwise, bias_add]
     if len(fused_ops) > 1:
@@ -38,11 +25,12 @@ def _split_fused_depthwise(node: util.NodeDef, input_node_map: util.NameToNode,
         if util.get_op_def(op) is None:
             # unsupported activation function - just copy type attribute
             dtype = depthwise.attr['T'].type
-            activation = util.make_op_node(op, input_nodes, node_name(3),
-                                           dtype)
+            activation = util.make_op_node(
+                op, input_nodes, f'{node.name}/{op}', dtype)
         else:
             # supported activation function - copy applicable attributes
-            activation = util.make_op_node(op, input_nodes, node_name(3))
+            activation = util.make_op_node(
+                op, input_nodes, f'{node.name}/{op}')
             activation = util.copy_op_attrs(source=node, target=activation)
         node_list.append(activation)
     return node_list

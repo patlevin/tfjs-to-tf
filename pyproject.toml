@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tfjs-graph-converter"
+authors = [
+    {name = "Patrick Levin", email = "vertical-pink@protonmail.com"}
+]
+description = "A tensorflowjs Graph Model Converter"
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["tensorflow", "tensorflowjs", "converter"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "tensorflow-macos>=2.3; platform_system=='Darwin'",
+    "tensorflow-metal>=2.3; platform_machine=='arm64'",
+    "tensorflowjs>=1.5.2",
+]
+dynamic = ["version"]
+
+[project.urls]
+homepage = "https://github.com/patlevin/tfjs-to-tf/"
+repository = "https://github.com/patlevin/tfjs-to-tf/"
+documentation = "https://github.com/patlevin/tfjs-to-tf/blob/master/docs/modules.rst"
+
+[project.scripts]
+tfjs_graph_converter = "tfjs_graph_converter.converter:pip_main"
+
+[project.optional-dependencies]
+test = ["Pillow>=8.0.0"]
+
+[tool.setuptools]
+packages = ["tfjs_graph_converter"]
+py-modules = [
+    "tfjs_graph_converter",
+    "tfjs_graph_converter.api",
+    "tfjs_graph_converter.common",
+    "tfjs_graph_converter.converter",
+    "tfjs_graph_converter.util",
+    "tfjs_graph_converter.version",
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "tfjs_graph_converter.version.VERSION"}
