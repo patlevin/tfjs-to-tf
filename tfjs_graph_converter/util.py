@@ -27,7 +27,7 @@ _DTYPE_MAP: List[Optional[type]] = [
     None,
     np.complex64,
     np.int64,
-    np.bool
+    bool
 ]
 
 NodeInfo = namedtuple('NodeInfo', 'name shape dtype tensor')
